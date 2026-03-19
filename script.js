@@ -31,7 +31,7 @@ navBlog.addEventListener('click', (e) => {
     showView('blog');
 });
 
-const COMMAND_LIST = ['help', 'ls', 'cat', 'whoami', 'clear', 'gui', 'uname', 'cd', 'pwd'];
+const COMMAND_LIST = ['help', 'ls', 'cat', 'whoami', 'clear', 'gui', 'uname', 'cd', 'pwd', 'uptime', 'date'];
 const FILE_LIST = ['about.txt', 'projects/', 'contact.txt', '/etc/hostname', '/etc/os-release'];
 
 const HELP_TEXT = `
@@ -43,6 +43,8 @@ Available commands:
   uname    - Display system info
   cd       - Change directory
   pwd      - Print working directory
+  uptime   - Display system uptime
+  date     - Display current date and time
   clear    - Clear the terminal
   gui      - Open GUI view
 `;
@@ -104,7 +106,8 @@ const VFS = {
     [`/home/${PROMPT_USER}/homework`]: { 
         type: 'dir', 
         children: [], 
-        redirect: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' 
+        redirect: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+        size: '∞'
     }
 };
 
@@ -162,7 +165,9 @@ function handleAutocomplete() {
     // Case 1: Autocomplete command (no space after the first word)
     if (parts.length === 1 && !val.endsWith(' ')) {
         const matches = COMMAND_LIST.filter(c => c.startsWith(parts[0]));
-        if (matches.length > 1) {
+        if (matches.length === 1) {
+            input.value = matches[0] + ' ';
+        } else if (matches.length > 1) {
             addLine(`${getPromptStr()}${val}`, 'prompt');
             addLine(matches.join('  '));
         }
@@ -237,7 +242,7 @@ function processCommand(cmd) {
                         const entry = VFS[itemPath];
                         const isDir = entry?.type === 'dir';
                         const perms = isDir ? 'drwxr-xr-x' : '-rw-r--r--';
-                        const size = isDir ? 4096 : (entry?.content ? entry.content.length : 0);
+                        const size = entry?.size !== undefined ? entry.size : (isDir ? 4096 : (entry?.content ? entry.content.length : 0));
                         const date = 'Mar 20 01:13';
                         addLine(`${perms}  1 ${PROMPT_USER} ${PROMPT_USER} ${size.toString().padStart(8)} ${date} ${item}`);
                     });
@@ -294,13 +299,35 @@ function processCommand(cmd) {
                     addLine(quote);
                 } else {
                     CWD = newPath;
-                    document.querySelector('.prompt').textContent = getPromptStr();
+                    const prompt = getPromptStr();
+                    document.querySelector('.prompt').textContent = prompt;
+                    document.title = prompt.trim();
                 }
             } else if (target && target.type === 'file') {
                 addLine(`cd: not a directory: ${args[1]}`);
             } else {
                 addLine(`cd: no such file or directory: ${args[1]}`);
             }
+            break;
+        case 'uptime':
+            const uNow = new Date();
+            const uTimeStr = uNow.toTimeString().split(' ')[0];
+            addLine(`${uTimeStr} up never, load average: never heard of her`);
+            break;
+        case 'date':
+            const dNow = new Date();
+            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const day = days[dNow.getDay()];
+            const month = months[dNow.getMonth()];
+            const date = dNow.getDate().toString().padStart(2, '0');
+            const hours = dNow.getHours();
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            const h12 = (hours % 12 || 12).toString().padStart(2, '0');
+            const mins = dNow.getMinutes().toString().padStart(2, '0');
+            const secs = dNow.getSeconds().toString().padStart(2, '0');
+            const year = dNow.getFullYear();
+            addLine(`${day} ${month} ${date} ${h12}:${mins}:${secs} ${ampm} IST ${year}`);
             break;
         case 'clear':
             output.innerHTML = '';
@@ -331,7 +358,9 @@ terminalView.addEventListener('click', () => {
 });
 
 // Update prompt in HTML
-document.querySelector('.prompt').textContent = getPromptStr();
+const initialPrompt = getPromptStr();
+document.querySelector('.prompt').textContent = initialPrompt;
+document.title = initialPrompt.trim();
 
 // Initial View
 showView('terminal');
