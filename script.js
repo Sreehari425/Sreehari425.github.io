@@ -5,6 +5,14 @@ const navBlog = document.getElementById('nav-blog');
 
 const output = document.getElementById('output');
 const input = document.getElementById('cli-input');
+const navIndicator = document.querySelector('.nav-indicator');
+
+function updateNavIndicator(activeElement) {
+    if (!navIndicator || !activeElement) return;
+    const { offsetLeft, offsetWidth } = activeElement;
+    navIndicator.style.transform = `translateY(-50%) translateX(${offsetLeft}px)`;
+    navIndicator.style.width = `${offsetWidth}px`;
+}
 
 function showView(view) {
     if (view === 'terminal') {
@@ -12,12 +20,14 @@ function showView(view) {
         blogView.classList.add('hidden');
         navTerminal.classList.add('active-pill');
         navBlog.classList.remove('active-pill');
+        updateNavIndicator(navTerminal);
         input.focus();
     } else {
         terminalView.classList.add('hidden');
         blogView.classList.remove('hidden');
         navTerminal.classList.remove('active-pill');
         navBlog.classList.add('active-pill');
+        updateNavIndicator(navBlog);
     }
 }
 
@@ -466,3 +476,9 @@ function initMobileSupport() {
 // Initial View
 showView('terminal');
 initMobileSupport();
+
+// Add resize listener to update indicator position
+window.addEventListener('resize', () => {
+    const activeLink = document.querySelector('.nav-links a.active-pill');
+    updateNavIndicator(activeLink);
+});
