@@ -34,6 +34,18 @@ navBlog.addEventListener('click', (e) => {
 const COMMAND_LIST = ['help', 'ls', 'cat', 'whoami', 'clear', 'gui', 'uname', 'cd', 'pwd', 'uptime', 'date'];
 const FILE_LIST = ['about.txt', 'projects/', 'contact.txt', '/etc/hostname', '/etc/os-release'];
 
+const ROAST_QUOTES = [
+    { text: "how did you even get here", weight: 0.3 },
+    { text: "where is your keyboard?", weight: 0.2 },
+    { text: "did you lose your soul?", weight: 0.1 },
+    { text: "this terminal requires a soul... and a keyboard", weight: 0.2 },
+    { text: "mobile support: never heard of her", weight: 0.2 }
+];
+
+const isMobile = () => {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 600;
+};
+
 const HELP_TEXT = `
 Available commands:
   help     - Show this help message
@@ -310,9 +322,7 @@ function processCommand(cmd) {
             }
             break;
         case 'uptime':
-            const uNow = new Date();
-            const uTimeStr = uNow.toTimeString().split(' ')[0];
-            addLine(`${uTimeStr} up never, load average: never heard of her`);
+            addLine(`${new Date().toTimeString().split(' ')[0]} up never, load average: never heard of her`);
             break;
         case 'date':
             const dNow = new Date();
@@ -362,5 +372,97 @@ const initialPrompt = getPromptStr();
 document.querySelector('.prompt').textContent = initialPrompt;
 document.title = initialPrompt.trim();
 
+function initKeyboard() {
+    const keyboard = document.getElementById('keyboard');
+    keyboard.classList.remove('hidden');
+
+    const layout = [
+        ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
+        ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l'],
+        ['z', 'x', 'c', 'v', 'b', 'n', 'm', '⌫'],
+        ['Tab', 'Space', '/', '-', '.', 'Enter']
+    ];
+
+    layout.forEach(row => {
+        const rowDiv = document.createElement('div');
+        rowDiv.className = 'keyboard-row';
+        row.forEach(key => {
+            const keyDiv = document.createElement('div');
+            keyDiv.className = 'key';
+            keyDiv.textContent = key;
+            
+            if (key === 'Space') keyDiv.classList.add('space');
+            if (['Tab', 'Enter', '⌫'].includes(key)) keyDiv.classList.add('wide');
+            if (['Enter', 'Tab'].includes(key)) keyDiv.classList.add('special');
+
+            keyDiv.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                if (key === '⌫') {
+                    input.value = input.value.slice(0, -1);
+                } else if (key === 'Enter') {
+                    processCommand(input.value);
+                    input.value = '';
+                } else if (key === 'Tab') {
+                    handleAutocomplete();
+                } else if (key === 'Space') {
+                    input.value += ' ';
+                } else {
+                    input.value += key;
+                }
+                input.focus();
+            };
+            rowDiv.appendChild(keyDiv);
+        });
+        keyboard.appendChild(rowDiv);
+    });
+}
+
+function initMobileSupport() {
+    if (!isMobile()) return;
+
+    const suggestionsContainer = document.getElementById('suggestions');
+    suggestionsContainer.classList.remove('hidden');
+
+    // Prevent native keyboard from appearing
+    input.setAttribute('inputmode', 'none');
+
+    initKeyboard();
+
+    const commonCommands = ['ls', 'help', 'whoami', 'uptime', 'gui'];
+    commonCommands.forEach(cmd => {
+        const span = document.createElement('span');
+        span.className = 'suggestion-tag';
+        span.textContent = cmd;
+        span.onclick = () => {
+            processCommand(cmd);
+            input.value = '';
+            input.focus();
+        };
+        suggestionsContainer.appendChild(span);
+    });
+
+    // Probability-based roast
+    const rand = Math.random();
+    let cumulative = 0;
+    let selectedQuote = ROAST_QUOTES[0].text;
+    for (const q of ROAST_QUOTES) {
+        cumulative += q.weight;
+        if (rand < cumulative) {
+            selectedQuote = q.text;
+            break;
+        }
+    }
+
+    addLine("bash: error: no keyboard detected", "error");
+    addLine(`       ${selectedQuote}`);
+    addLine("\nthis terminal requires:");
+    addLine("- a keyboard");
+    addLine("- a soul");
+    addLine("- basic linux knowledge");
+}
+
 // Initial View
 showView('terminal');
+initMobileSupport();
