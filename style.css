@@ -1,0 +1,211 @@
+:root {
+  --bg-color: #000000;
+  --text-color: #ffb000; 
+  --dim-text: #664400;
+  --accent-color: #ffb000;
+  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+  --bar-bg: #110900;
+  --bar-border: #331a00;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  font-family: var(--font-mono);
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* CRT Scanline Effect */
+body::before {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+  z-index: 2;
+  background-size: 100% 2px, 3px 100%;
+  pointer-events: none;
+}
+
+/* Navigation Bar */
+.nav-container {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  max-width: 900px;
+  z-index: 1000;
+}
+
+.nav-bar {
+  background: rgba(10, 10, 10, 0.8);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid #222;
+  border-radius: 100px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  padding: 0 2rem;
+  justify-content: space-between;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.nav-logo {
+  font-weight: 800;
+  font-size: 1.2rem;
+  color: #fff;
+  text-decoration: none;
+}
+
+.nav-links {
+  display: flex;
+  gap: 2rem;
+  align-items: center;
+}
+
+.nav-links a {
+  color: #888;
+  text-decoration: none;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  transition: color 0.2s;
+}
+
+.nav-links a:hover {
+  color: #fff;
+}
+
+.nav-links a.active-pill {
+  background-color: var(--accent-color);
+  color: #000;
+  padding: 8px 20px;
+  border-radius: 100px;
+}
+
+.nav-right {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.nav-right svg {
+  width: 18px;
+  height: 18px;
+  fill: #888;
+  transition: fill 0.2s;
+}
+
+.nav-right svg:hover {
+  fill: #fff;
+}
+
+/* Adjust terminal padding for floating nav */
+.terminal-container {
+  height: 100vh;
+  padding: 100px 2rem 2rem 2rem;
+  overflow-y: auto;
+  position: relative;
+  z-index: 5;
+}
+
+.output {
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin-bottom: 1rem;
+}
+
+.input-line {
+  display: flex;
+  align-items: center;
+}
+
+.prompt {
+  margin-right: 0.5rem;
+  color: var(--accent-color);
+}
+
+#cli-input {
+  background: transparent;
+  border: none;
+  color: var(--text-color);
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  outline: none;
+  flex: 1;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-color);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #222;
+}
+
+/* Animations */
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.cursor {
+  display: inline-block;
+  width: 10px;
+  height: 1.2rem;
+  background-color: var(--accent-color);
+  animation: blink 1s infinite;
+  vertical-align: middle;
+}
+
+.header-text {
+  color: #fff;
+  margin-bottom: 1.5rem;
+  text-shadow: 0 0 5px var(--accent-color);
+}
+
+/* View Toggling */
+.hidden {
+  display: none !important;
+}
+
+#blog-view {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  color: #444;
+}
+
+#blog-view h1 {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  color: var(--accent-color);
+  text-shadow: 0 0 10px rgba(255, 176, 0, 0.4);
+}
+
+#blog-view p {
+  font-size: 1rem;
+  letter-spacing: 2px;
+}
