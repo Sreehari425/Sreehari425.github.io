@@ -59,6 +59,15 @@ const ABOUT_TEXT = `
 To be filled lol
 `;
 
+const RICKROLL_QUOTES = [
+    "the wise man does not search another man's homework folder\n— Sun Tzu, The Art of War (never said this)",
+    "he who expects reward in hidden folders\nshall receive only a british man singing\n— Confucius (definitely never said this)",
+    "curiosity is the mother of disappointment\nand disappointment is the mother of character\n— Aristotle (he was busy with other stuff)",
+    "the anticipation of treasure\nis itself the punishment\n— Friedrich Nietzsche (would not approve of rickroll)",
+    "what you seek is not behind closed doors\nit is behind your own eyes\nalso it was never in the homework folder\n— Sun Tzu, probably",
+    "you came. you saw. you got rickrolled.\n— Julius Caesar (if he understood the internet)"
+];
+
 function getBrowser() {
     const ua = navigator.userAgent;
     if (ua.includes('Firefox')) return 'firefox';
@@ -281,7 +290,8 @@ function processCommand(cmd) {
             if (target && target.type === 'dir') {
                 if (target.redirect) {
                     window.open(target.redirect, '_blank');
-                    addLine('the wise man does not search another man\'s homework folder\n — Sun Tzu, The Art of War (never said this)');
+                    const quote = RICKROLL_QUOTES[Math.floor(Math.random() * RICKROLL_QUOTES.length)];
+                    addLine(quote);
                 } else {
                     CWD = newPath;
                     document.querySelector('.prompt').textContent = getPromptStr();
