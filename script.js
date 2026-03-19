@@ -82,7 +82,7 @@ const PROMPT_HOST = getBrowser();
 const VFS = {
     '/': { type: 'dir', children: ['home', 'etc', 'bin', 'usr', 'var'] },
     '/home': { type: 'dir', children: [PROMPT_USER] },
-    [`/home/${PROMPT_USER}`]: { type: 'dir', children: ['about.txt', 'projects', 'contact.txt'] },
+    [`/home/${PROMPT_USER}`]: { type: 'dir', children: ['about.txt', 'projects', 'contact.txt', 'homework'] },
     '/etc': { type: 'dir', children: ['hostname', 'os-release'] },
     '/bin': { type: 'dir', children: ['ls', 'cat', 'pwd', 'cd', 'help', 'clear', 'gui', 'uname'] },
     '/usr': { type: 'dir', children: [] },
@@ -91,7 +91,12 @@ const VFS = {
     '/etc/os-release': { type: 'file', content: `NAME="${getOS()}"` },
     [`/home/${PROMPT_USER}/about.txt`]: { type: 'file', content: ABOUT_TEXT },
     [`/home/${PROMPT_USER}/contact.txt`]: { type: 'file', content: 'To be filled lol' },
-    [`/home/${PROMPT_USER}/projects`]: { type: 'dir', children: Object.keys(PROJECTS) }
+    [`/home/${PROMPT_USER}/projects`]: { type: 'dir', children: Object.keys(PROJECTS) },
+    [`/home/${PROMPT_USER}/homework`]: { 
+        type: 'dir', 
+        children: [], 
+        redirect: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' 
+    }
 };
 
 // Add project files to VFS
@@ -200,17 +205,53 @@ function processCommand(cmd) {
             addLine(HELP_TEXT);
             break;
         case 'ls':
-            const lsPath = resolvePath(args[1]);
+            const actualArgs = args.slice(1);
+            let lsFiles = actualArgs.filter(a => !a.startsWith('-'));
+            let flags = actualArgs.filter(a => a.startsWith('-')).join('');
+            const showHidden = flags.includes('a');
+            const longFormat = flags.includes('l');
+            
+            const lsPath = resolvePath(lsFiles[0]);
             const lsTarget = VFS[lsPath];
+            
             if (lsTarget && lsTarget.type === 'dir') {
-                addLine(lsTarget.children.join('  '));
+                let items = [...lsTarget.children];
+                if (showHidden) items = ['.', '..', ...items];
+                
+                if (longFormat) {
+                    addLine(`total ${items.length * 4}`);
+                    items.forEach(item => {
+                        let itemPath = lsPath === '/' ? `/${item}` : `${lsPath}/${item}`;
+                        if (item === '.') itemPath = lsPath;
+                        if (item === '..') itemPath = resolvePath(lsPath + '/..');
+                        
+                        const entry = VFS[itemPath];
+                        const isDir = entry?.type === 'dir';
+                        const perms = isDir ? 'drwxr-xr-x' : '-rw-r--r--';
+                        const size = isDir ? 4096 : (entry?.content ? entry.content.length : 0);
+                        const date = 'Mar 20 01:13';
+                        addLine(`${perms}  1 ${PROMPT_USER} ${PROMPT_USER} ${size.toString().padStart(8)} ${date} ${item}`);
+                    });
+                } else {
+                    addLine(items.join('  '));
+                }
             } else if (lsTarget && lsTarget.type === 'file') {
-                addLine(args[1]);
+                if (longFormat) {
+                    const date = 'Mar 20 01:13';
+                    const size = lsTarget.content ? lsTarget.content.length : 0;
+                    addLine(`-rw-r--r--  1 ${PROMPT_USER} ${PROMPT_USER} ${size.toString().padStart(8)} ${date} ${lsFiles[0]}`);
+                } else {
+                    addLine(lsFiles[0]);
+                }
             } else {
-                addLine(`ls: cannot access '${args[1] || ''}': No such file or directory`);
+                addLine(`ls: cannot access '${lsFiles[0] || ''}': No such file or directory`);
             }
             break;
         case 'cat':
+            if (!args[1]) {
+                addLine('usage: cat <file>');
+                break;
+            }
             const catPath = resolvePath(args[1]);
             const catTarget = VFS[catPath];
             if (catTarget && catTarget.type === 'file') {
@@ -238,8 +279,13 @@ function processCommand(cmd) {
             const newPath = resolvePath(args[1] || '~');
             const target = VFS[newPath];
             if (target && target.type === 'dir') {
-                CWD = newPath;
-                document.querySelector('.prompt').textContent = getPromptStr();
+                if (target.redirect) {
+                    window.open(target.redirect, '_blank');
+                    addLine('the wise man does not search another man\'s homework folder\n — Sun Tzu, The Art of War (never said this)');
+                } else {
+                    CWD = newPath;
+                    document.querySelector('.prompt').textContent = getPromptStr();
+                }
             } else if (target && target.type === 'file') {
                 addLine(`cd: not a directory: ${args[1]}`);
             } else {
