@@ -142,6 +142,23 @@ body::before {
   margin-bottom: 1rem;
 }
 
+#v86-screen {
+  width: 100%;
+  height: calc(100vh - 200px);
+  background: #000;
+  border: 1px solid var(--bar-border);
+  margin-bottom: 1rem;
+  font-family: 'Courier New', monospace; /* v86 terminal font */
+  position: relative;
+  overflow: hidden;
+}
+
+#v86-screen div {
+  white-space: pre;
+  font-family: inherit;
+  font-size: 14px;
+}
+
 .input-line {
   display: flex;
   align-items: center;

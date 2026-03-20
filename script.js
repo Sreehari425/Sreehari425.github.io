@@ -5,6 +5,7 @@ const navBlog = document.getElementById('nav-blog');
 
 const output = document.getElementById('output');
 const input = document.getElementById('cli-input');
+const promptEl = document.querySelector('.input-line .prompt'); // cache the REAL prompt span
 const navIndicator = document.querySelector('.nav-indicator');
 
 function updateNavIndicator(activeElement) {
@@ -41,7 +42,7 @@ navBlog.addEventListener('click', (e) => {
     showView('blog');
 });
 
-const COMMAND_LIST = ['help', 'ls', 'cat', 'whoami', 'clear', 'gui', 'uname', 'cd', 'pwd', 'uptime', 'date'];
+const COMMAND_LIST = ['help', 'ls', 'cat', 'whoami', 'clear', 'gui', 'uname', 'cd', 'pwd', 'uptime', 'date', 'linux', 'boot'];
 const FILE_LIST = ['about.txt', 'projects/', 'contact.txt', '/etc/hostname', '/etc/os-release'];
 
 const ROAST_QUOTES = [
@@ -69,6 +70,7 @@ Available commands:
   date     - Display current date and time
   clear    - Clear the terminal
   gui      - Open GUI view
+  linux    - Boot into real Linux (v86)
 `;
 
 const PROJECTS = {
@@ -320,9 +322,11 @@ function processCommand(cmd) {
                     addLine(quote);
                 } else {
                     CWD = newPath;
-                    const prompt = getPromptStr();
-                    document.querySelector('.prompt').textContent = prompt;
-                    document.title = prompt.trim();
+                    if (!v86Mode) {
+                        const prompt = getPromptStr();
+                        promptEl.textContent = prompt;
+                        document.title = prompt.trim();
+                    }
                 }
             } else if (target && target.type === 'file') {
                 addLine(`cd: not a directory: ${args[1]}`);
@@ -354,6 +358,10 @@ function processCommand(cmd) {
         case 'gui':
             showView('blog');
             break;
+        case 'linux':
+        case 'boot':
+            startV86();
+            break;
         case '':
             break;
         default:
@@ -361,7 +369,175 @@ function processCommand(cmd) {
     }
 }
 
+let emulator = null;
+let v86Mode = false;        // true when Linux is running
+let linuxLineBuffer = '';   // buffer for building output lines
+let ansiEscBuf = null;      // non-null while buffering an ANSI escape sequence
+
+// Pipe a byte from v86 serial into our terminal, stripping ANSI escapes
+function handleSerialOutput(charCode) {
+    const ch = String.fromCharCode(charCode);
+
+    // --- ANSI escape sequence state machine ---
+    if (ansiEscBuf !== null) {
+        ansiEscBuf += ch;
+        // CSI sequences (ESC[...) end with a letter A-Z / a-z
+        // OSC sequences (ESC]...) end with BEL (0x07) or ESC\
+        const done =
+            (ansiEscBuf.length >= 2 && /[A-Za-z]/.test(ch)) || // CSI/private end
+            charCode === 7 ||                                     // BEL ends OSC
+            (ansiEscBuf.length >= 2 && ansiEscBuf.slice(-2) === '\x1b\\'); // ST
+        if (done || ansiEscBuf.length > 64) { ansiEscBuf = null; }
+        return; // always throw away escape content
+    }
+    if (ch === '\x1b') { ansiEscBuf = ''; return; } // start escape sequence
+
+    // --- Normal character handling ---
+    if (ch === '\r') { return; } // ignore CR
+
+    if (ch === '\n') {
+        // Only flush non-empty, non-prompt lines to output
+        if (linuxLineBuffer.trim()) {
+            const div = document.createElement('div');
+            div.textContent = linuxLineBuffer;
+            div.style.whiteSpace = 'pre';
+            output.appendChild(div);
+        }
+        linuxLineBuffer = '';
+        terminalView.scrollTop = terminalView.scrollHeight;
+    } else if (ch === '\b' || charCode === 127) {
+        linuxLineBuffer = linuxLineBuffer.slice(0, -1);
+    } else if (charCode >= 32 || ch === '\t') {
+        linuxLineBuffer += ch;
+
+        // Detect shell prompts: ends with "% ", "# ", "$ " (with at least 1 char before)
+        // Match after the space so we catch "/root% " as a full unit
+        if (v86Mode && ch === ' ' && /[\$#%] $/.test(linuxLineBuffer) && linuxLineBuffer.trim().length > 1) {
+            const promptText = linuxLineBuffer.trimEnd();
+            promptEl.textContent = promptText + ' ';
+            linuxLineBuffer = ''; // consume — don't print to output
+        }
+    }
+}
+
+function startV86() {
+    if (emulator) {
+        addLine("Linux is already running. Type commands below — you're talking to a real kernel!");
+        return;
+    }
+
+    const V86Class = typeof V86 !== 'undefined' ? V86 : (typeof V86Starter !== 'undefined' ? V86Starter : null);
+    if (!V86Class) {
+        addLine('Error: libv86.js failed to load. Run the site via a local HTTP server (not file://).', 'error');
+        return;
+    }
+
+    addLine("── Booting real Linux kernel via WASM ──────────────────────", "dim");
+    addLine("Kernel output will stream here. Auto-logging in as root...", "dim");
+    addLine("────────────────────────────────────────────────────────────", "dim");
+
+    try {
+        emulator = new V86Class({
+            wasm_path: "v86.wasm",
+            memory_size: 32 * 1024 * 1024,
+            vga_memory_size: 2 * 1024 * 1024,
+            bios: { url: "bios/seabios.bin" },
+            vga_bios: { url: "bios/vgabios.bin" },
+            cdrom: { url: "images/linux.iso" },
+            autostart: true,
+            cmdline: "rw root=/dev/sr0 console=ttyS0",
+        });
+
+        // Switch to Linux mode immediately — update prompt right away
+        v86Mode = true;
+        const linuxPrompt = 'root@buildroot:~# ';
+        promptEl.textContent = linuxPrompt;
+        document.title = 'root@buildroot:~#';
+        input.placeholder = "Linux is booting... type commands and press Enter";
+        input.focus();
+
+        // Pipe serial0 output into our terminal
+        // Also watch for the login prompt and auto-login as root
+        let loginSent = false;
+        emulator.add_listener("serial0-output-byte", (charCode) => {
+            handleSerialOutput(charCode);
+            // Auto-login: if we see "login:" in the buffer, send "root\n"
+            if (!loginSent && linuxLineBuffer.toLowerCase().includes('login:')) {
+                loginSent = true;
+                setTimeout(() => {
+                    emulator.serial0_send("root\n");
+                    input.placeholder = "Type Linux commands here, press Enter to send";
+                }, 200);
+            }
+        });
+
+        emulator.add_listener("emulator-stopped", () => {
+            addLine("\n── Linux kernel halted ──", "error");
+            v86Mode = false;
+            emulator = null;
+            loginSent = false;
+            const origPrompt = getPromptStr();
+            promptEl.textContent = origPrompt;
+            document.title = origPrompt.trim();
+            input.placeholder = '';
+        });
+
+    } catch (e) {
+        addLine(`Failed to start emulator: ${e.message}`, "error");
+        emulator = null;
+        v86Mode = false;
+        promptEl.textContent = getPromptStr();
+        input.placeholder = '';
+    }
+}
+
 input.addEventListener('keydown', (e) => {
+    if (v86Mode && emulator) {
+        const sendStr = (s) => emulator.serial0_send(s);
+
+        switch (e.key) {
+            case 'Enter':
+                e.preventDefault();
+                sendStr(input.value + '\n');
+                input.value = '';
+                break;
+            case 'Backspace':
+                // Let backspace edit the input field normally; also send DEL to Linux
+                sendStr('\x7f');
+                break;
+            case 'Tab':
+                e.preventDefault();
+                sendStr('\t');
+                break;
+            case 'ArrowUp':
+                e.preventDefault();
+                sendStr('\x1b[A');
+                break;
+            case 'ArrowDown':
+                e.preventDefault();
+                sendStr('\x1b[B');
+                break;
+            case 'ArrowRight':
+                e.preventDefault();
+                sendStr('\x1b[C');
+                break;
+            case 'ArrowLeft':
+                e.preventDefault();
+                sendStr('\x1b[D');
+                break;
+            default:
+                if (e.ctrlKey && e.key.length === 1) {
+                    e.preventDefault();
+                    // Ctrl+C = \x03, Ctrl+D = \x04, etc.
+                    sendStr(String.fromCharCode(e.key.toUpperCase().charCodeAt(0) - 64));
+                }
+                // Regular printable chars: let the browser handle typing into
+                // the input box normally; they'll be sent on Enter
+        }
+        return;
+    }
+
+    // Normal mock terminal mode
     if (e.key === 'Enter') {
         processCommand(input.value);
         input.value = '';
@@ -371,14 +547,14 @@ input.addEventListener('keydown', (e) => {
     }
 });
 
-// Focus input on click anywhere in terminal
+// Focus input on click anywhere in terminal (works in both mock and Linux mode)
 terminalView.addEventListener('click', () => {
     input.focus();
 });
 
 // Update prompt in HTML
 const initialPrompt = getPromptStr();
-document.querySelector('.prompt').textContent = initialPrompt;
+promptEl.textContent = initialPrompt;
 document.title = initialPrompt.trim();
 
 function initKeyboard() {
@@ -405,6 +581,7 @@ function initKeyboard() {
             if (['Enter', 'Tab'].includes(key)) keyDiv.classList.add('special');
 
             keyDiv.onclick = (e) => {
+                if (emulator) return; // Don't run mock commands if v86 is up
                 e.preventDefault();
                 e.stopPropagation();
                 
@@ -445,6 +622,7 @@ function initMobileSupport() {
         span.className = 'suggestion-tag';
         span.textContent = cmd;
         span.onclick = () => {
+            if (emulator) return; // Don't run mock commands if v86 is up
             processCommand(cmd);
             input.value = '';
             input.focus();
@@ -474,12 +652,12 @@ function initMobileSupport() {
 
 // Initial View
 showView('terminal');
-initMobileSupport();
 
 // Auto-run commands
 processCommand('help');
 processCommand('ls');
 
+initMobileSupport();
 // Add resize listener to update indicator position
 window.addEventListener('resize', () => {
     const activeLink = document.querySelector('.nav-links a.active-pill');
