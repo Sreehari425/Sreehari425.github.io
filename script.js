@@ -31,33 +31,25 @@ function initXterm() {
     term.loadAddon(fitAddon);
     term.open(document.getElementById('v86-xterm-container'));
     
-    let xtermInputBuffer = '';
-
-    // Send keystrokes directly to the Linux kernel
-    term.onData(data => {
-        if (v86Mode && emulator) {
-            emulator.serial0_send(data);
-            
-            // Track input to manually stop emulator on poweroff/exit
-            if (data === '\r' || data === '\n') {
-                const cmd = xtermInputBuffer.trim().toLowerCase();
-                xtermInputBuffer = '';
-                if (cmd.endsWith('poweroff') || cmd.endsWith('exit')) {
-                    // Give it 1.5s to close gracefully before killing v86
-                    setTimeout(() => {
-                        if (emulator) {
-                            emulator.stop();
-                        }
-                    }, 1500); 
-                }
-            } else if (data === '\x7f' || data === '\b') {
-                if (xtermInputBuffer.length > 0) xtermInputBuffer = xtermInputBuffer.slice(0, -1);
-            } else {
-                // Collect characters as strings to check what's typed
-                xtermInputBuffer += data.replace(/[^a-zA-Z]/g, '');
-            }
+    // Prevent native keyboard from appearing in xterm on mobile
+    if (isMobile()) {
+        const xtermTextarea = document.querySelector('.xterm-helper-textarea');
+        if (xtermTextarea) {
+            xtermTextarea.setAttribute('inputmode', 'none');
+            xtermTextarea.setAttribute('readonly', 'readonly');
         }
+    }
+    
+    // Unified input handler to track 'poweroff' and 'exit' commands
+    term.onData(data => {
+        handleV86Input(data);
     });
+
+    // Watch for size changes using ResizeObserver (handles CSS transitions & un-hiding)
+    const resizeObserver = new ResizeObserver(() => {
+        if (v86Mode && fitAddon) fitAddon.fit();
+    });
+    resizeObserver.observe(document.getElementById('v86-xterm-container'));
 
     window.addEventListener('resize', () => {
         if (v86Mode && fitAddon) fitAddon.fit();
@@ -427,8 +419,32 @@ function processCommand(cmd) {
 
 let emulator = null;
 let v86Mode = false;        // true when Linux is running
-let linuxLineBuffer = '';   // buffer for building output lines
-let ansiEscBuf = null;      // non-null while buffering an ANSI escape sequence
+let v86InputBuffer = '';
+
+function handleV86Input(data) {
+    if (!v86Mode || !emulator) return;
+    
+    // Always send the data to the serial console
+    emulator.serial0_send(data);
+    
+    // Track inputs for poweroff/exit detection (one or more characters)
+    for (let i = 0; i < data.length; i++) {
+        const char = data[i];
+        if (char === '\r' || char === '\n') {
+            const cmd = v86InputBuffer.trim().toLowerCase();
+            v86InputBuffer = '';
+            if (cmd === 'poweroff' || cmd === 'exit' || cmd.endsWith('poweroff') || cmd.endsWith('exit')) {
+                // Wait 1.5s for command to execute before stopping emulator
+                setTimeout(() => { if (emulator) emulator.stop(); }, 1500);
+            }
+        } else if (char === '\x7f' || char === '\b') {
+            v86InputBuffer = v86InputBuffer.slice(0, -1);
+        } else {
+            // Keep only alphanumeric characters for command detection (no spaces/symbols for simplicity)
+            v86InputBuffer += char.replace(/[^a-zA-Z]/g, '');
+        }
+    }
+}
 
 // Pipe a byte from v86 serial into our terminal, stripping ANSI escapes
 // handleSerialOutput removed since xterm handles ANSI natively
@@ -472,6 +488,7 @@ function startV86() {
         document.querySelector('.header-text').classList.add('hidden');
         document.getElementById('v86-xterm-container').classList.remove('hidden');
         terminalView.classList.add('linux-mode');
+        terminalView.scrollTop = 0; // Ensure we start at the top to clear the fixed navbar
         
         if (isMobile()) updateMobileSuggestions('linux');
         
@@ -488,6 +505,7 @@ function startV86() {
             ' |_____/|_|  \\___|\\___|_| |_|\\__,_|_|  |_|\r\n' +
             '                                           \r\n' +
             ' [ LINUX KERNEL INITIALIZED ]\r\n' +
+            ' [ NOTE: WAIT FOR THE ROOT LOGIN ]\r\n' +
             ' [ TYPE "poweroff" TO RETURN ]\r\n' +
             '\x1b[0m\r\n\r\n');
 
@@ -571,28 +589,32 @@ input.addEventListener('keydown', (e) => {
                 }
                 break;
             case 'Backspace':
-                // Let backspace edit the input field normally; also send DEL to Linux
-                sendStr('\x7f');
+                e.preventDefault();
+                handleV86Input('\x7f');
                 break;
             case 'Tab':
                 e.preventDefault();
-                sendStr('\t');
+                handleV86Input('\t');
                 break;
             case 'ArrowUp':
                 e.preventDefault();
-                sendStr('\x1b[A');
+                handleV86Input('\x1b[A');
                 break;
             case 'ArrowDown':
                 e.preventDefault();
-                sendStr('\x1b[B');
+                handleV86Input('\x1b[B');
                 break;
             case 'ArrowRight':
                 e.preventDefault();
-                sendStr('\x1b[C');
+                handleV86Input('\x1b[C');
                 break;
             case 'ArrowLeft':
                 e.preventDefault();
-                sendStr('\x1b[D');
+                handleV86Input('\x1b[D');
+                break;
+            case 'Enter':
+                e.preventDefault();
+                handleV86Input('\n');
                 break;
             default:
                 if (e.ctrlKey && e.key.length === 1) {
@@ -659,32 +681,32 @@ function initKeyboard() {
                 
                 if (key === '⌫') {
                     if (v86Mode && emulator) {
-                        emulator.serial0_send('\x8f'); // or '\x7f', backspace
+                        handleV86Input('\x7f');
                     } else {
                         input.value = input.value.slice(0, -1);
                     }
                 } else if (key === 'Enter') {
                     if (v86Mode && emulator) {
-                        emulator.serial0_send('\n');
+                        handleV86Input('\n');
                     } else {
                         processCommand(input.value);
                         input.value = '';
                     }
                 } else if (key === 'Tab') {
                     if (v86Mode && emulator) {
-                        emulator.serial0_send('\t');
+                        handleV86Input('\t');
                     } else {
                         handleAutocomplete();
                     }
                 } else if (key === 'Space') {
                     if (v86Mode && emulator) {
-                        emulator.serial0_send(' ');
+                        handleV86Input(' ');
                     } else {
                         input.value += ' ';
                     }
                 } else {
                     if (v86Mode && emulator) {
-                        emulator.serial0_send(key);
+                        handleV86Input(key);
                     } else {
                         input.value += key;
                     }
@@ -706,8 +728,9 @@ function updateMobileSuggestions(mode) {
     const suggestionsContainer = document.getElementById('suggestions');
     if (!suggestionsContainer) return;
     
+    suggestionsContainer.classList.remove('hidden');
     suggestionsContainer.innerHTML = '';
-    const commands = mode === 'linux' ? ['poweroff', 'ls', 'vi', 'Esc', 'Ctrl+C'] : ['ls', 'help', 'whoami', 'uptime', 'gui'];
+    const commands = mode === 'linux' ? ['poweroff', 'ls', 'vi', 'Esc', 'Ctrl+C', 'Ctrl+Z', 'Ctrl+D'] : ['ls', 'help', 'whoami', 'uptime', 'gui'];
     
     commands.forEach(cmd => {
         const span = document.createElement('span');
@@ -716,14 +739,15 @@ function updateMobileSuggestions(mode) {
         span.onclick = () => {
             if (mode === 'linux' && emulator) {
                 if (cmd === 'Esc') {
-                    emulator.serial0_send('\x1b');
+                    handleV86Input('\x1b');
                 } else if (cmd === 'Ctrl+C') {
-                    emulator.serial0_send('\x03');
+                    handleV86Input('\x03');
+                } else if (cmd === 'Ctrl+Z') {
+                    handleV86Input('\x1a');
+                } else if (cmd === 'Ctrl+D') {
+                    handleV86Input('\x04');
                 } else {
-                    emulator.serial0_send(cmd + '\n');
-                    if (cmd === 'poweroff' || cmd === 'exit') {
-                        setTimeout(() => { if (emulator) emulator.stop(); }, 1500);
-                    }
+                    handleV86Input(cmd + '\n');
                 }
                 if (term) term.focus();
             } else {
@@ -738,6 +762,7 @@ function updateMobileSuggestions(mode) {
 
 function initMobileSupport() {
     if (!isMobile()) return;
+    document.body.classList.add('is-mobile');
 
     const suggestionsContainer = document.getElementById('suggestions');
     suggestionsContainer.classList.remove('hidden');

@@ -138,6 +138,7 @@ body::before {
 }
 
 .terminal-container.linux-mode {
+  padding-top: 120px; /* Extra space to clear the fixed navbar */
   padding-bottom: 2rem;
   overflow: hidden;
 }
@@ -281,7 +282,16 @@ body::before {
   flex-wrap: wrap;
   gap: 0.8rem;
   margin-top: 1.5rem;
-  padding-bottom: 2rem;
+  padding-bottom: 1rem;
+}
+
+.keyboard .suggestions {
+  margin-top: 0;
+  padding-bottom: 0.5rem;
+  justify-content: center;
+  border-bottom: 1px solid rgba(255, 176, 0, 0.1);
+  margin-bottom: 0.5rem;
+  width: 100%;
 }
 
 .suggestion-tag {
@@ -314,18 +324,18 @@ body::before {
 }
 
 @media (max-width: 600px) {
-  .terminal-container {
-    padding: 80px 1rem 45vh 1rem;
-  }
-  
-  .nav-bar {
-    padding: 0 1rem;
-  }
-  
-  .nav-links {
-    gap: 1rem;
-  }
+  .terminal-container { padding: 80px 1rem 45vh 1rem; }
+  .terminal-container.linux-mode { padding-top: 110px; padding-bottom: 300px; }
+  #v86-xterm-container { height: calc(100vh - 420px); }
+  .nav-bar { padding: 0 1rem; }
+  .nav-links { gap: 1rem; }
 }
+
+body.is-mobile .terminal-container { padding: 80px 1rem 45vh 1rem; }
+body.is-mobile .terminal-container.linux-mode { padding-top: 110px; padding-bottom: 300px; }
+body.is-mobile #v86-xterm-container { height: calc(100vh - 420px); }
+body.is-mobile .nav-bar { padding: 0 1rem; }
+body.is-mobile .nav-links { gap: 1rem; }
 /* On-Screen Keyboard */
 .keyboard {
   position: fixed;

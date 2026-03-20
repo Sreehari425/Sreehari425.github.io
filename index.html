@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>sreehari@anil: ~</title>
   <meta name="description" content="systems developer terminal" />
   <link rel="stylesheet" href="style.css" />
@@ -57,8 +57,9 @@
       <span class="prompt">sreehari_anil@localhost:~$</span>
       <input type="text" id="cli-input" autofocus autocomplete="off" />
     </div>
-    <div id="suggestions" class="suggestions hidden"></div>
-    <div id="keyboard" class="keyboard hidden"></div>
+    <div id="keyboard" class="keyboard hidden">
+      <div id="suggestions" class="suggestions hidden"></div>
+    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
