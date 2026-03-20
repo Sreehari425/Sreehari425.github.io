@@ -434,6 +434,8 @@ function startV86() {
 
     addLine("── Booting real Linux kernel via WASM ──────────────────────", "dim");
     addLine("Kernel output will stream here. Auto-logging in as root...", "dim");
+    addLine("Note: to go back to default termianl use poweroff", "dim");
+
     addLine("────────────────────────────────────────────────────────────", "dim");
 
     try {
@@ -592,17 +594,30 @@ function initKeyboard() {
             if (['Enter', 'Tab'].includes(key)) keyDiv.classList.add('special');
 
             keyDiv.onclick = (e) => {
-                if (emulator) return; // Don't run mock commands if v86 is up
                 e.preventDefault();
                 e.stopPropagation();
                 
                 if (key === '⌫') {
+                    if (v86Mode && emulator) emulator.serial0_send('\x7f');
                     input.value = input.value.slice(0, -1);
                 } else if (key === 'Enter') {
-                    processCommand(input.value);
-                    input.value = '';
+                    if (v86Mode && emulator) {
+                        const v86Cmd = input.value.trim();
+                        emulator.serial0_send(input.value + '\n');
+                        input.value = '';
+                        if (v86Cmd === 'poweroff' || v86Cmd === 'exit') {
+                            setTimeout(() => { if (emulator) emulator.stop(); }, 1500);
+                        }
+                    } else {
+                        processCommand(input.value);
+                        input.value = '';
+                    }
                 } else if (key === 'Tab') {
-                    handleAutocomplete();
+                    if (v86Mode && emulator) {
+                        emulator.serial0_send('\t');
+                    } else {
+                        handleAutocomplete();
+                    }
                 } else if (key === 'Space') {
                     input.value += ' ';
                 } else {
@@ -633,8 +648,14 @@ function initMobileSupport() {
         span.className = 'suggestion-tag';
         span.textContent = cmd;
         span.onclick = () => {
-            if (emulator) return; // Don't run mock commands if v86 is up
-            processCommand(cmd);
+            if (v86Mode && emulator) {
+                emulator.serial0_send(cmd + '\n');
+                if (cmd === 'poweroff' || cmd === 'exit') {
+                    setTimeout(() => { if (emulator) emulator.stop(); }, 1500);
+                }
+            } else {
+                processCommand(cmd);
+            }
             input.value = '';
             input.focus();
         };
