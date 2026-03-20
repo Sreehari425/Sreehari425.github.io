@@ -31,10 +31,31 @@ function initXterm() {
     term.loadAddon(fitAddon);
     term.open(document.getElementById('v86-xterm-container'));
     
+    let xtermInputBuffer = '';
+
     // Send keystrokes directly to the Linux kernel
     term.onData(data => {
         if (v86Mode && emulator) {
             emulator.serial0_send(data);
+            
+            // Track input to manually stop emulator on poweroff/exit
+            if (data === '\r' || data === '\n') {
+                const cmd = xtermInputBuffer.trim().toLowerCase();
+                xtermInputBuffer = '';
+                if (cmd.endsWith('poweroff') || cmd.endsWith('exit')) {
+                    // Give it 1.5s to close gracefully before killing v86
+                    setTimeout(() => {
+                        if (emulator) {
+                            emulator.stop();
+                        }
+                    }, 1500); 
+                }
+            } else if (data === '\x7f' || data === '\b') {
+                if (xtermInputBuffer.length > 0) xtermInputBuffer = xtermInputBuffer.slice(0, -1);
+            } else {
+                // Collect characters as strings to check what's typed
+                xtermInputBuffer += data.replace(/[^a-zA-Z]/g, '');
+            }
         }
     });
 
@@ -448,6 +469,7 @@ function startV86() {
         // Hide mock terminal interface, launch xterm
         output.classList.add('hidden');
         document.querySelector('.input-line').classList.add('hidden');
+        document.querySelector('.header-text').classList.add('hidden');
         document.getElementById('v86-xterm-container').classList.remove('hidden');
         terminalView.classList.add('linux-mode');
         
@@ -481,6 +503,7 @@ function startV86() {
             document.getElementById('v86-xterm-container').classList.add('hidden');
             output.classList.remove('hidden');
             document.querySelector('.input-line').classList.remove('hidden');
+            document.querySelector('.header-text').classList.remove('hidden');
             terminalView.classList.remove('linux-mode');
             
             addLine("\n── Linux kernel halted ──", "error");
@@ -498,6 +521,7 @@ function startV86() {
         document.getElementById('v86-xterm-container').classList.add('hidden');
         output.classList.remove('hidden');
         document.querySelector('.input-line').classList.remove('hidden');
+        document.querySelector('.header-text').classList.remove('hidden');
         terminalView.classList.remove('linux-mode');
         
         addLine(`Failed to start emulator: ${e.message}`, "error");
