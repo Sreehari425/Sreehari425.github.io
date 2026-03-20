@@ -75,7 +75,7 @@ Available commands:
 
 const PROJECTS = {
     'presenceforge': 'To be filled lol',
-    'neutronlauncher': 'To be filled lol',
+    'Q6w': 'To be filled lol',
     'nwpython': 'To be filled lol',
     'ping-pong': 'To be filled lol'
 };
