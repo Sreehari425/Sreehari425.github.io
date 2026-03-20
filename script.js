@@ -8,6 +8,41 @@ const input = document.getElementById('cli-input');
 const promptEl = document.querySelector('.input-line .prompt'); // cache the REAL prompt span
 const navIndicator = document.querySelector('.nav-indicator');
 
+let term = null;
+let fitAddon = null;
+
+function initXterm() {
+    if (term) return;
+    term = new Terminal({
+        fontFamily: '"VT323", monospace',
+        fontSize: 18,
+        allowTransparency: true,
+        theme: {
+            background: '#00000000',
+            foreground: '#FFB000',
+            cursor: '#FFB000',
+            cursorAccent: '#000',
+            selection: 'rgba(255, 176, 0, 0.3)',
+        },
+        cursorBlink: true,
+        cursorStyle: 'block'
+    });
+    fitAddon = new FitAddon.FitAddon();
+    term.loadAddon(fitAddon);
+    term.open(document.getElementById('v86-xterm-container'));
+    
+    // Send keystrokes directly to the Linux kernel
+    term.onData(data => {
+        if (v86Mode && emulator) {
+            emulator.serial0_send(data);
+        }
+    });
+
+    window.addEventListener('resize', () => {
+        if (v86Mode && fitAddon) fitAddon.fit();
+    });
+}
+
 function updateNavIndicator(activeElement) {
     if (!navIndicator || !activeElement) return;
     const { offsetLeft, offsetWidth } = activeElement;
@@ -375,50 +410,7 @@ let linuxLineBuffer = '';   // buffer for building output lines
 let ansiEscBuf = null;      // non-null while buffering an ANSI escape sequence
 
 // Pipe a byte from v86 serial into our terminal, stripping ANSI escapes
-function handleSerialOutput(charCode) {
-    const ch = String.fromCharCode(charCode);
-
-    // --- ANSI escape sequence state machine ---
-    if (ansiEscBuf !== null) {
-        ansiEscBuf += ch;
-        // CSI sequences (ESC[...) end with a letter A-Z / a-z
-        // OSC sequences (ESC]...) end with BEL (0x07) or ESC\
-        const done =
-            (ansiEscBuf.length >= 2 && /[A-Za-z]/.test(ch)) || // CSI/private end
-            charCode === 7 ||                                     // BEL ends OSC
-            (ansiEscBuf.length >= 2 && ansiEscBuf.slice(-2) === '\x1b\\'); // ST
-        if (done || ansiEscBuf.length > 64) { ansiEscBuf = null; }
-        return; // always throw away escape content
-    }
-    if (ch === '\x1b') { ansiEscBuf = ''; return; } // start escape sequence
-
-    // --- Normal character handling ---
-    if (ch === '\r') { return; } // ignore CR
-
-    if (ch === '\n') {
-        // Only flush non-empty, non-prompt lines to output
-        if (linuxLineBuffer.trim()) {
-            const div = document.createElement('div');
-            div.textContent = linuxLineBuffer;
-            div.style.whiteSpace = 'pre';
-            output.appendChild(div);
-        }
-        linuxLineBuffer = '';
-        terminalView.scrollTop = terminalView.scrollHeight;
-    } else if (ch === '\b' || charCode === 127) {
-        linuxLineBuffer = linuxLineBuffer.slice(0, -1);
-    } else if (charCode >= 32 || ch === '\t') {
-        linuxLineBuffer += ch;
-
-        // Detect shell prompts: ends with "% ", "# ", "$ " (with at least 1 char before)
-        // Match after the space so we catch "/root% " as a full unit
-        if (v86Mode && ch === ' ' && /[\$#%] $/.test(linuxLineBuffer) && linuxLineBuffer.trim().length > 1) {
-            const promptText = linuxLineBuffer.trimEnd();
-            promptEl.textContent = promptText + ' ';
-            linuxLineBuffer = ''; // consume — don't print to output
-        }
-    }
-}
+// handleSerialOutput removed since xterm handles ANSI natively
 
 function startV86() {
     if (emulator) {
@@ -450,46 +442,70 @@ function startV86() {
             cmdline: "rw root=/dev/sr0 console=ttyS0",
         });
 
-        // Switch to Linux mode immediately — update prompt right away
+        // Switch to Linux mode immediately
         v86Mode = true;
-        const linuxPrompt = 'root@buildroot:~# ';
-        promptEl.textContent = linuxPrompt;
-        document.title = 'root@buildroot:~#';
-        input.placeholder = "Linux is booting... type commands and press Enter";
-        input.focus();
+        
+        // Hide mock terminal interface, launch xterm
+        output.classList.add('hidden');
+        document.querySelector('.input-line').classList.add('hidden');
+        document.getElementById('v86-xterm-container').classList.remove('hidden');
+        terminalView.classList.add('linux-mode');
+        
+        initXterm();
+        fitAddon.fit();
+        term.focus();
 
-        // Pipe serial0 output into our terminal
-        // Also watch for the login prompt and auto-login as root
+        // Pipe serial0 output directly into xterm!
         let loginSent = false;
+        let loginBuffer = '';
+        
         emulator.add_listener("serial0-output-byte", (charCode) => {
-            handleSerialOutput(charCode);
-            // Auto-login: if we see "login:" in the buffer, send "root\n"
-            if (!loginSent && linuxLineBuffer.toLowerCase().includes('login:')) {
-                loginSent = true;
-                setTimeout(() => {
-                    emulator.serial0_send("root\n");
-                    input.placeholder = "Type Linux commands here, press Enter to send";
-                }, 200);
+            const char = String.fromCharCode(charCode);
+            if (term) term.write(char);
+            
+            // Auto-login logic
+            if (!loginSent) {
+                loginBuffer += char;
+                if (loginBuffer.toLowerCase().includes('login:')) {
+                    loginSent = true;
+                    setTimeout(() => {
+                        emulator.serial0_send("root\n");
+                    }, 500); // 500ms delay to let prompt render fully
+                }
+                if (loginBuffer.length > 200) loginBuffer = loginBuffer.slice(-100);
             }
         });
 
         emulator.add_listener("emulator-stopped", () => {
+            // Restore Fake Terminal
+            document.getElementById('v86-xterm-container').classList.add('hidden');
+            output.classList.remove('hidden');
+            document.querySelector('.input-line').classList.remove('hidden');
+            terminalView.classList.remove('linux-mode');
+            
             addLine("\n── Linux kernel halted ──", "error");
             v86Mode = false;
             emulator = null;
-            loginSent = false;
+            
             const origPrompt = getPromptStr();
             promptEl.textContent = origPrompt;
             document.title = origPrompt.trim();
-            input.placeholder = '';
+            input.focus();
         });
 
     } catch (e) {
+        // Restore Fake Terminal
+        document.getElementById('v86-xterm-container').classList.add('hidden');
+        output.classList.remove('hidden');
+        document.querySelector('.input-line').classList.remove('hidden');
+        terminalView.classList.remove('linux-mode');
+        
         addLine(`Failed to start emulator: ${e.message}`, "error");
         emulator = null;
         v86Mode = false;
         promptEl.textContent = getPromptStr();
         input.placeholder = '';
+        input.focus();
     }
 }
 
@@ -562,7 +578,11 @@ input.addEventListener('keydown', (e) => {
 
 // Focus input on click anywhere in terminal (works in both mock and Linux mode)
 terminalView.addEventListener('click', () => {
-    input.focus();
+    if (v86Mode && term) {
+        term.focus();
+    } else {
+        input.focus();
+    }
 });
 
 // Update prompt in HTML
@@ -598,16 +618,14 @@ function initKeyboard() {
                 e.stopPropagation();
                 
                 if (key === '⌫') {
-                    if (v86Mode && emulator) emulator.serial0_send('\x7f');
-                    input.value = input.value.slice(0, -1);
+                    if (v86Mode && emulator) {
+                        emulator.serial0_send('\x8f'); // or '\x7f', backspace
+                    } else {
+                        input.value = input.value.slice(0, -1);
+                    }
                 } else if (key === 'Enter') {
                     if (v86Mode && emulator) {
-                        const v86Cmd = input.value.trim();
-                        emulator.serial0_send(input.value + '\n');
-                        input.value = '';
-                        if (v86Cmd === 'poweroff' || v86Cmd === 'exit') {
-                            setTimeout(() => { if (emulator) emulator.stop(); }, 1500);
-                        }
+                        emulator.serial0_send('\n');
                     } else {
                         processCommand(input.value);
                         input.value = '';
@@ -619,11 +637,24 @@ function initKeyboard() {
                         handleAutocomplete();
                     }
                 } else if (key === 'Space') {
-                    input.value += ' ';
+                    if (v86Mode && emulator) {
+                        emulator.serial0_send(' ');
+                    } else {
+                        input.value += ' ';
+                    }
                 } else {
-                    input.value += key;
+                    if (v86Mode && emulator) {
+                        emulator.serial0_send(key);
+                    } else {
+                        input.value += key;
+                    }
                 }
-                input.focus();
+                
+                if (v86Mode && term) {
+                    term.focus();
+                } else {
+                    input.focus();
+                }
             };
             rowDiv.appendChild(keyDiv);
         });
@@ -653,11 +684,12 @@ function initMobileSupport() {
                 if (cmd === 'poweroff' || cmd === 'exit') {
                     setTimeout(() => { if (emulator) emulator.stop(); }, 1500);
                 }
+                if (term) term.focus();
             } else {
                 processCommand(cmd);
+                input.value = '';
+                input.focus();
             }
-            input.value = '';
-            input.focus();
         };
         suggestionsContainer.appendChild(span);
     });

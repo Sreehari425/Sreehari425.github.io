@@ -134,6 +134,12 @@ body::before {
   overflow-y: auto;
   position: relative;
   z-index: 5;
+  transition: padding 0.3s ease;
+}
+
+.terminal-container.linux-mode {
+  padding-bottom: 2rem;
+  overflow: hidden;
 }
 
 .output {
@@ -157,6 +163,25 @@ body::before {
   white-space: pre;
   font-family: inherit;
   font-size: 14px;
+}
+
+#v86-xterm-container {
+  width: 100%;
+  height: calc(100vh - 140px);
+  margin-bottom: 0;
+}
+
+/* xterm.js aesthetic overrides */
+.xterm {
+  padding: 0;
+  background-color: transparent !important;
+}
+.xterm-viewport {
+  scrollbar-width: none;
+  background-color: transparent !important;
+}
+.xterm-viewport::-webkit-scrollbar {
+  display: none;
 }
 
 .input-line {
