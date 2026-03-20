@@ -447,7 +447,7 @@ function startV86() {
 
     addLine("── Booting real Linux kernel via WASM ──────────────────────", "dim");
     addLine("Kernel output will stream here. Auto-logging in as root...", "dim");
-    addLine("Note: to go back to default termianl use poweroff", "dim");
+    addLine("Note: to go back to default terminal use poweroff", "dim");
 
     addLine("────────────────────────────────────────────────────────────", "dim");
 
@@ -473,9 +473,23 @@ function startV86() {
         document.getElementById('v86-xterm-container').classList.remove('hidden');
         terminalView.classList.add('linux-mode');
         
+        if (isMobile()) updateMobileSuggestions('linux');
+        
         initXterm();
         fitAddon.fit();
         term.focus();
+
+        term.write('\x1b[33m\r\n' +
+            '   _____                  _                 _\r\n' +
+            '  / ____|                | |               (_)\r\n' +
+            ' | (___  _ __ ___  ___| |__   __ _ _ __ _ \r\n' +
+            '  \\___ \\| \'__/ _ \\/ _ \\ \'_ \\ / _` | \'__| |\r\n' +
+            '  ____) | | |  __/  __/ | | | (_| | |  | |\r\n' +
+            ' |_____/|_|  \\___|\\___|_| |_|\\__,_|_|  |_|\r\n' +
+            '                                           \r\n' +
+            ' [ LINUX KERNEL INITIALIZED ]\r\n' +
+            ' [ TYPE "poweroff" TO RETURN ]\r\n' +
+            '\x1b[0m\r\n\r\n');
 
         // Pipe serial0 output directly into xterm!
         let loginSent = false;
@@ -505,6 +519,8 @@ function startV86() {
             document.querySelector('.input-line').classList.remove('hidden');
             document.querySelector('.header-text').classList.remove('hidden');
             terminalView.classList.remove('linux-mode');
+            
+            if (isMobile()) updateMobileSuggestions('mock');
             
             addLine("\n── Linux kernel halted ──", "error");
             v86Mode = false;
@@ -686,27 +702,28 @@ function initKeyboard() {
     });
 }
 
-function initMobileSupport() {
-    if (!isMobile()) return;
-
+function updateMobileSuggestions(mode) {
     const suggestionsContainer = document.getElementById('suggestions');
-    suggestionsContainer.classList.remove('hidden');
-
-    // Prevent native keyboard from appearing
-    input.setAttribute('inputmode', 'none');
-
-    initKeyboard();
-
-    const commonCommands = ['ls', 'help', 'whoami', 'uptime', 'gui'];
-    commonCommands.forEach(cmd => {
+    if (!suggestionsContainer) return;
+    
+    suggestionsContainer.innerHTML = '';
+    const commands = mode === 'linux' ? ['poweroff', 'ls', 'vi', 'Esc', 'Ctrl+C'] : ['ls', 'help', 'whoami', 'uptime', 'gui'];
+    
+    commands.forEach(cmd => {
         const span = document.createElement('span');
         span.className = 'suggestion-tag';
         span.textContent = cmd;
         span.onclick = () => {
-            if (v86Mode && emulator) {
-                emulator.serial0_send(cmd + '\n');
-                if (cmd === 'poweroff' || cmd === 'exit') {
-                    setTimeout(() => { if (emulator) emulator.stop(); }, 1500);
+            if (mode === 'linux' && emulator) {
+                if (cmd === 'Esc') {
+                    emulator.serial0_send('\x1b');
+                } else if (cmd === 'Ctrl+C') {
+                    emulator.serial0_send('\x03');
+                } else {
+                    emulator.serial0_send(cmd + '\n');
+                    if (cmd === 'poweroff' || cmd === 'exit') {
+                        setTimeout(() => { if (emulator) emulator.stop(); }, 1500);
+                    }
                 }
                 if (term) term.focus();
             } else {
@@ -717,6 +734,19 @@ function initMobileSupport() {
         };
         suggestionsContainer.appendChild(span);
     });
+}
+
+function initMobileSupport() {
+    if (!isMobile()) return;
+
+    const suggestionsContainer = document.getElementById('suggestions');
+    suggestionsContainer.classList.remove('hidden');
+
+    // Prevent native keyboard from appearing
+    input.setAttribute('inputmode', 'none');
+
+    initKeyboard();
+    updateMobileSuggestions('mock');
 
     // Probability-based roast
     const rand = Math.random();
