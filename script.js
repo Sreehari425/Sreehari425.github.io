@@ -498,8 +498,19 @@ input.addEventListener('keydown', (e) => {
         switch (e.key) {
             case 'Enter':
                 e.preventDefault();
+                const v86Cmd = input.value.trim();
                 sendStr(input.value + '\n');
                 input.value = '';
+                
+                // If the user types poweroff or exit, let's gracefully stop the emulator
+                // after a short delay to let the command run
+                if (v86Cmd === 'poweroff' || v86Cmd === 'exit') {
+                    setTimeout(() => {
+                        if (emulator) {
+                            emulator.stop();
+                        }
+                    }, 1500); // give it 1.5s to print shutdown messages
+                }
                 break;
             case 'Backspace':
                 // Let backspace edit the input field normally; also send DEL to Linux
