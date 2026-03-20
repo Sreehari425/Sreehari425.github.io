@@ -476,6 +476,10 @@ function initMobileSupport() {
 showView('terminal');
 initMobileSupport();
 
+// Auto-run commands
+processCommand('help');
+processCommand('ls');
+
 // Add resize listener to update indicator position
 window.addEventListener('resize', () => {
     const activeLink = document.querySelector('.nav-links a.active-pill');
