@@ -466,7 +466,7 @@ function handleV86Input(data) {
         if (char === '\r' || char === '\n') {
             const cmd = v86InputBuffer.trim().toLowerCase();
             v86InputBuffer = '';
-            if (cmd === 'poweroff' || cmd === 'exit' || cmd.endsWith('poweroff') || cmd.endsWith('exit')) {
+            if (cmd === 'poweroff' || cmd.endsWith('poweroff')) {
                 // Wait 1.5s for command to execute before stopping emulator
                 setTimeout(() => { if (emulator) emulator.stop(); }, 1500);
             }
@@ -628,9 +628,9 @@ input.addEventListener('keydown', (e) => {
                 sendStr(input.value + '\n');
                 input.value = '';
                 
-                // If the user types poweroff or exit, let's gracefully stop the emulator
+                // If the user types poweroff, let's gracefully stop the emulator
                 // after a short delay to let the command run
-                if (v86Cmd === 'poweroff' || v86Cmd === 'exit') {
+                if (v86Cmd === 'poweroff') {
                     setTimeout(() => {
                         if (emulator) {
                             emulator.stop();
