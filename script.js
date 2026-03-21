@@ -474,7 +474,7 @@ function startV86() {
             vga_memory_size: 2 * 1024 * 1024,
             bios: { url: "bios/seabios.bin" },
             vga_bios: { url: "bios/vgabios.bin" },
-            cdrom: { url: "images/linux.iso" },
+            cdrom: { url: "images/v86-linux.iso" },
             autostart: true,
             cmdline: "rw root=/dev/sr0 console=ttyS0",
         });

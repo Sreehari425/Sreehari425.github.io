@@ -27,7 +27,7 @@ curl -L -o v86.wasm https://copy.sh/v86/build/v86.wasm
 mkdir -p bios images
 curl -L -o bios/seabios.bin  https://copy.sh/v86/bios/seabios.bin
 curl -L -o bios/vgabios.bin  https://copy.sh/v86/bios/vgabios.bin
-curl -L -o images/linux.iso  https://copy.sh/v86/images/linux.iso
+curl -L -o images/v86-linux.iso  <url-to-your-custom-iso>
 ```
 
 ## Third-party credits & licenses
@@ -39,14 +39,41 @@ This project ships the following binary assets:
 | `libv86.js`, `v86.wasm` | [v86](https://github.com/copy/v86) by Fabian Hemmer | [MIT](https://github.com/copy/v86/blob/master/LICENSE) |
 | `bios/seabios.bin` | [SeaBIOS](https://www.seabios.org) | LGPL v3 |
 | `bios/vgabios.bin` | [LGPL VGA BIOS](https://www.nongnu.org/vgabios/) | LGPL v2 |
-| `images/linux.iso` | Linux kernel + BusyBox (via v86 buildroot image) | GPL v2 |
+| `images/v86-linux.iso` | Custom Linux kernel + BusyBox (built via Buildroot) | GPL v2 |
 | `coi-serviceworker.js` | [coi-serviceworker](https://github.com/gzuidhof/coi-serviceworker) by Guido Zuidhof | [MIT](https://github.com/gzuidhof/coi-serviceworker/blob/master/LICENSE) |
 
 Source code for GPL/LGPL components:
 - Linux kernel source: https://kernel.org
 - BusyBox source: https://busybox.net
 - SeaBIOS source: https://github.com/coreboot/seabios
-- v86 buildroot image sources: https://github.com/copy/v86/tree/master/tools/docker/buildroot
+- Custom buildroot image sources: https://github.com/Sreehari425/browser-vm
+
+## SOURCES & CREDITS
+
+The Linux image in the repo was built using the following open-source projects:
+
+  Browser VM (Buildroot config & Build Tree)
+    https://github.com/Sreehari425/browser-vm
+    (Forked/Based on https://github.com/humphd/browser-vm)
+
+  Buildroot (2021.02-rc2)
+    https://buildroot.org
+
+  v86 (x86 emulator in WebAssembly)
+    https://github.com/copy/v86
+
+  SeaBIOS
+    https://www.seabios.org
+
+  Linux Kernel (4.19.172)
+    https://kernel.org
+
+  BusyBox
+    https://busybox.net
+
+Customized and maintained by Sreehari
+  https://github.com/Sreehari425
+
 
 ## inspiration
 
