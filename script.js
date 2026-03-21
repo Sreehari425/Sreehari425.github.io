@@ -122,15 +122,17 @@ Available commands:
 `;
 
 const PROJECTS = {
-    'presenceforge': 'To be filled lol',
-    'Q6w': 'To be filled lol',
-    'nwpython': 'To be filled lol',
-    'ping-pong': 'To be filled lol'
+    'presenceforge': '\nA Discord Rich Presence client library in Rust, supporting multiple async runtimes.\nFeatures include Flatpak detection, Unix sockets, and Windows named pipes.\nLink: https://github.com/Sreehari425/presenceforge\n',
+    'q6w': '\nPlays videos as your Wayland wallpaper.\nBuilt with wgpu and GStreamer. and it efficent.\nLink: https://github.com/Sreehari425/q6w\n',
+    'idk-os': '\nA tiny x86_64 kernel written in Rust.\nBoots to VGA text mode.it can do echo only as of writing this\nLink: https://codeberg.org/sreehari425/idk-os\n',
+    'ping-pong': '\nA simple ping pong game combining x86-64 Assembly and C.\nGame logic and collision in pure Assembly, rendering handled by C with SDL2.\nLink: https://github.com/Sreehari425/ping-pong\n',
+    'this-website': '\na portfolio that got out of hand.\nstarted as a fake terminal. ended up with a real linux kernel.\nvanilla JS, v86, and a custom buildroot image.\nLink: https://github.com/Sreehari425/Sreehari425.github.io\n'
 };
 
-const ABOUT_TEXT = `
-To be filled lol
-`;
+const ABOUT_TEXT = `\n
+hi, i'm sreehari anil . i enjoy system programing .
+i mainly code in rust, but i know my way around other languages also :)
+\n`;
 
 const RICKROLL_QUOTES = [
     "the wise man does not search another man's homework folder\n— Sun Tzu, The Art of War (never said this)",
@@ -172,7 +174,7 @@ const VFS = {
     '/etc/hostname': { type: 'file', content: PROMPT_HOST },
     '/etc/os-release': { type: 'file', content: `NAME="${getOS()}"` },
     [`/home/${PROMPT_USER}/about.txt`]: { type: 'file', content: ABOUT_TEXT },
-    [`/home/${PROMPT_USER}/contact.txt`]: { type: 'file', content: 'To be filled lol' },
+    [`/home/${PROMPT_USER}/contact.txt`]: { type: 'file', content: 'Email: sreehari7102008@gmail.com\\nGitHub: https://github.com/Sreehari425\\nCodeberg: https://codeberg.org/sreehari425' },
     [`/home/${PROMPT_USER}/projects`]: { type: 'dir', children: Object.keys(PROJECTS) },
     [`/home/${PROMPT_USER}/homework`]: { 
         type: 'dir', 
@@ -220,9 +222,37 @@ function resolvePath(path) {
 
 function addLine(text, className = '') {
     const div = document.createElement('div');
-    div.textContent = text;
     if (className) div.classList.add(className);
+    
+    if (typeof text === 'string') {
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        let lastIdx = 0;
+        let match;
+        
+        while ((match = urlRegex.exec(text)) !== null) {
+            if (match.index > lastIdx) {
+                div.appendChild(document.createTextNode(text.slice(lastIdx, match.index)));
+            }
+            const a = document.createElement('a');
+            a.href = match[0];
+            a.target = '_blank';
+            a.textContent = match[0];
+            a.style.color = 'inherit';
+            a.style.textDecoration = 'underline';
+            div.appendChild(a);
+            lastIdx = match.index + match[0].length;
+        }
+        
+        if (lastIdx < text.length) {
+            div.appendChild(document.createTextNode(text.slice(lastIdx)));
+        }
+    } else {
+        div.textContent = text;
+    }
+
     output.appendChild(div);
+    // Only auto-scroll if we are already near the bottom, or if this was triggered by user input
+    // This stops it from hijacking scroll when reading output history
     terminalView.scrollTop = terminalView.scrollHeight;
 }
 
@@ -476,6 +506,9 @@ function startV86() {
             vga_bios: { url: "bios/vgabios.bin" },
             cdrom: { url: "images/v86-linux.iso" },
             autostart: true,
+            disable_keyboard: true,
+            disable_mouse: true,
+            disable_speaker: true,
             cmdline: "rw root=/dev/sr0 console=ttyS0",
         });
 
@@ -540,7 +573,10 @@ function startV86() {
             }
         });
 
+        let hasHalted = false;
         emulator.add_listener("emulator-stopped", () => {
+            if (hasHalted) return;
+            hasHalted = true;
             // Restore Fake Terminal
             document.getElementById('v86-xterm-container').classList.add('hidden');
             output.classList.remove('hidden');
@@ -557,7 +593,8 @@ function startV86() {
             const origPrompt = getPromptStr();
             promptEl.textContent = origPrompt;
             document.title = origPrompt.trim();
-            input.focus();
+            // Optional: don't aggressively focus input to allow scrolling
+            // input.focus();
         });
 
     } catch (e) {
@@ -649,11 +686,20 @@ input.addEventListener('keydown', (e) => {
 });
 
 // Focus input on click anywhere in terminal (works in both mock and Linux mode)
-terminalView.addEventListener('click', () => {
+terminalView.addEventListener('click', (e) => {
+    // Prevent focus stealing if user is selecting text
+    if (window.getSelection().toString().trim().length > 0) return;
+    
+    // Prevent focus stealing if clicking a link
+    if (e.target.tagName === 'A') return;
+
+    // Ignore clicks on the scrollbar
+    if (e.offsetX > e.target.clientWidth) return;
+
     if (v86Mode && term) {
         term.focus();
     } else {
-        input.focus();
+        input.focus({ preventScroll: true });
     }
 });
 

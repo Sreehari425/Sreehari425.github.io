@@ -18,6 +18,9 @@ body {
   background-color: var(--bg-color);
   color: var(--text-color);
   font-family: var(--font-mono);
+  font-size: 16px;
+  line-height: 1.6;
+  letter-spacing: 0.3px;
   overflow: hidden;
   height: 100vh;
   width: 100vw;
@@ -130,7 +133,7 @@ body::before {
 /* Adjust terminal padding for floating nav */
 .terminal-container {
   height: 100vh;
-  padding: 100px 2rem 50vh 2rem;
+  padding: 100px 2rem 2rem 2rem;
   overflow-y: auto;
   position: relative;
   z-index: 5;
@@ -147,6 +150,7 @@ body::before {
   white-space: pre-wrap;
   word-break: break-all;
   margin-bottom: 1rem;
+  font-size: 1.05rem;
 }
 
 #v86-screen {
@@ -209,7 +213,8 @@ body::before {
   border: none;
   color: var(--text-color);
   font-family: var(--font-mono);
-  font-size: 1rem;
+  font-size: 1.05rem;
+  letter-spacing: inherit;
   outline: none;
   flex: 1;
 }
