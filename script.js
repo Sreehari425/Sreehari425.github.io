@@ -91,7 +91,7 @@ navBlog.addEventListener('click', (e) => {
 });
 
 const COMMAND_LIST = ['help', 'ls', 'cat', 'whoami', 'clear', 'gui', 'uname', 'cd', 'pwd', 'uptime', 'date', 'linux', 'boot'];
-const FILE_LIST = ['about.txt', 'projects/', 'contact.txt', '/etc/hostname', '/etc/os-release'];
+const FILE_LIST = ['aboutme.txt', 'projects/', 'contact.txt', '/etc/hostname', '/etc/os-release'];
 
 const ROAST_QUOTES = [
     { text: "how did you even get here", weight: 0.3 },
@@ -132,7 +132,7 @@ const PROJECTS = {
 const CONTRIBUTIONS_TEXT = `\nQuantumLauncher by mrmayman\nWine by WineHQ\n`;
 
 const ABOUT_TEXT = `\n
-hi, i'm sreehari anil . i enjoy system programing .
+hi, i'm sreehari anil . i enjoy systems programming .
 i mainly code in rust, but i know my way around other languages also :)
 \n`;
 
@@ -168,14 +168,14 @@ const PROMPT_HOST = getBrowser();
 const VFS = {
     '/': { type: 'dir', children: ['home', 'etc', 'bin', 'usr', 'var'] },
     '/home': { type: 'dir', children: [PROMPT_USER] },
-    [`/home/${PROMPT_USER}`]: { type: 'dir', children: ['about.txt', 'projects', 'contributions.txt', 'contact.txt', 'homework'] },
+    [`/home/${PROMPT_USER}`]: { type: 'dir', children: ['aboutme.txt', 'projects', 'contributions.txt', 'contact.txt', 'homework'] },
     '/etc': { type: 'dir', children: ['hostname', 'os-release'] },
     '/bin': { type: 'dir', children: ['ls', 'cat', 'pwd', 'cd', 'help', 'clear', 'gui', 'uname'] },
     '/usr': { type: 'dir', children: [] },
     '/var': { type: 'dir', children: [] },
     '/etc/hostname': { type: 'file', content: PROMPT_HOST },
     '/etc/os-release': { type: 'file', content: `NAME="${getOS()}"` },
-    [`/home/${PROMPT_USER}/about.txt`]: { type: 'file', content: ABOUT_TEXT },
+    [`/home/${PROMPT_USER}/aboutme.txt`]: { type: 'file', content: ABOUT_TEXT },
     [`/home/${PROMPT_USER}/contact.txt`]: { type: 'file', content: 'Email: sreehari7102008@gmail.com\\nGitHub: https://github.com/Sreehari425\\nCodeberg: https://codeberg.org/sreehari425' },
     [`/home/${PROMPT_USER}/projects`]: { type: 'dir', children: Object.keys(PROJECTS) },
     [`/home/${PROMPT_USER}/contributions.txt`]: { type: 'file', content: CONTRIBUTIONS_TEXT },
