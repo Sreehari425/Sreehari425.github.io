@@ -129,6 +129,8 @@ const PROJECTS = {
     'this-website': '\na portfolio that got out of hand.\nstarted as a fake terminal. ended up with a real linux kernel.\nvanilla JS, v86, and a custom buildroot image.\nLink: https://github.com/Sreehari425/Sreehari425.github.io\n'
 };
 
+const CONTRIBUTIONS_TEXT = `\nQuantumLauncher by mrmayman\nWine by WineHQ\n`;
+
 const ABOUT_TEXT = `\n
 hi, i'm sreehari anil . i enjoy system programing .
 i mainly code in rust, but i know my way around other languages also :)
@@ -166,7 +168,7 @@ const PROMPT_HOST = getBrowser();
 const VFS = {
     '/': { type: 'dir', children: ['home', 'etc', 'bin', 'usr', 'var'] },
     '/home': { type: 'dir', children: [PROMPT_USER] },
-    [`/home/${PROMPT_USER}`]: { type: 'dir', children: ['about.txt', 'projects', 'contact.txt', 'homework'] },
+    [`/home/${PROMPT_USER}`]: { type: 'dir', children: ['about.txt', 'projects', 'contributions.txt', 'contact.txt', 'homework'] },
     '/etc': { type: 'dir', children: ['hostname', 'os-release'] },
     '/bin': { type: 'dir', children: ['ls', 'cat', 'pwd', 'cd', 'help', 'clear', 'gui', 'uname'] },
     '/usr': { type: 'dir', children: [] },
@@ -176,6 +178,7 @@ const VFS = {
     [`/home/${PROMPT_USER}/about.txt`]: { type: 'file', content: ABOUT_TEXT },
     [`/home/${PROMPT_USER}/contact.txt`]: { type: 'file', content: 'Email: sreehari7102008@gmail.com\\nGitHub: https://github.com/Sreehari425\\nCodeberg: https://codeberg.org/sreehari425' },
     [`/home/${PROMPT_USER}/projects`]: { type: 'dir', children: Object.keys(PROJECTS) },
+    [`/home/${PROMPT_USER}/contributions.txt`]: { type: 'file', content: CONTRIBUTIONS_TEXT },
     [`/home/${PROMPT_USER}/homework`]: { 
         type: 'dir', 
         children: [], 
