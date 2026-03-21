@@ -192,6 +192,15 @@ for (const [name, content] of Object.entries(PROJECTS)) {
     VFS[`/home/${PROMPT_USER}/projects/${name}`] = { type: 'file', content };
 }
 
+// Add binaries to VFS
+for (const bin of VFS['/bin'].children) {
+    VFS[`/bin/${bin}`] = { 
+        type: 'file', 
+        content: '\x7FELF\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00>\x00\x01\x00\x00\x00', 
+        size: Math.floor(Math.random() * 50000) + 20000 
+    };
+}
+
 let CWD = `/home/${PROMPT_USER}`;
 const HOME_DIR = `/home/${PROMPT_USER}`;
 
@@ -313,8 +322,52 @@ function handleAutocomplete() {
 }
 
 function processCommand(cmd) {
-    const args = cmd.toLowerCase().trim().split(/\s+/);
-    const command = args[0];
+    if (!cmd || cmd.trim() === '') return;
+    let rawArgs = cmd.trim().split(/\s+/);
+    let args = [];
+
+    // Basic wildcard expansion (* only inside arguments)
+    for (let i = 0; i < rawArgs.length; i++) {
+        const arg = rawArgs[i];
+        if (arg.includes('*') && i > 0) {
+            const dirSplitIdx = arg.lastIndexOf('/');
+            let dirPart = CWD;
+            let pattern = arg;
+
+            if (dirSplitIdx >= 0) {
+                dirPart = resolvePath(arg.substring(0, dirSplitIdx) || '/');
+                pattern = arg.substring(dirSplitIdx + 1);
+            }
+
+            const regexStr = '^' + pattern.replace(/\./g, '\\.').replace(/\*/g, '.*') + '$';
+            const regex = new RegExp(regexStr);
+
+            const dir = VFS[dirPart];
+            if (dir && dir.type === 'dir') {
+                const matches = dir.children.filter(f => regex.test(f)).sort();
+                if (matches.length > 0) {
+                    const prefix = (dirSplitIdx >= 0) ? arg.substring(0, dirSplitIdx + 1) : '';
+                    matches.forEach(m => args.push(prefix + m));
+                } else {
+                    args.push(arg);
+                }
+            } else {
+                args.push(arg);
+            }
+        } else {
+            args.push(arg);
+        }
+    }
+
+    let command = args[0].toLowerCase();
+
+    // Handle path execution like /bin/ls or ./ls in /bin
+    if (command.includes('/')) {
+        const execPath = resolvePath(command);
+        if (execPath.startsWith('/bin/') && VFS[execPath]) {
+            command = execPath.split('/').pop();
+        }
+    }
 
     addLine(`${getPromptStr()}${cmd}`, 'prompt');
 
@@ -322,26 +375,56 @@ function processCommand(cmd) {
         case 'help':
             addLine(HELP_TEXT);
             break;
-        case 'ls':
+        case 'ls': {
             const actualArgs = args.slice(1);
             let lsFiles = actualArgs.filter(a => !a.startsWith('-'));
             let flags = actualArgs.filter(a => a.startsWith('-')).join('');
             const showHidden = flags.includes('a');
             const longFormat = flags.includes('l');
             
-            const lsPath = resolvePath(lsFiles[0]);
-            const lsTarget = VFS[lsPath];
+            if (lsFiles.length === 0) lsFiles = ['.'];
             
-            if (lsTarget && lsTarget.type === 'dir') {
-                let items = [...lsTarget.children];
+            let dirs = [];
+            let files = [];
+            let notFound = [];
+            
+            lsFiles.forEach(f => {
+                const path = resolvePath(f);
+                const target = VFS[path];
+                if (!target) notFound.push(f);
+                else if (target.type === 'dir') dirs.push({name: f, path});
+                else files.push({name: f, path, target});
+            });
+            
+            notFound.forEach(f => addLine(`ls: cannot access '${f}': No such file or directory`));
+            
+            if (files.length > 0) {
+                if (longFormat) {
+                    files.forEach(f => {
+                        const date = 'Mar 20 01:13';
+                        const size = f.target.size !== undefined ? f.target.size : (f.target.content ? f.target.content.length : 0);
+                        addLine(`-rw-r--r--  1 ${PROMPT_USER} ${PROMPT_USER} ${size.toString().padStart(8)} ${date} ${f.name}`);
+                    });
+                } else {
+                    addLine(files.map(f => f.name).join('  '));
+                }
+            }
+            
+            dirs.forEach((d, i) => {
+                if (lsFiles.length > 1) {
+                    if (files.length > 0 || i > 0) addLine('');
+                    addLine(`${d.name}:`);
+                }
+                
+                let items = [...VFS[d.path].children];
                 if (showHidden) items = ['.', '..', ...items];
                 
                 if (longFormat) {
                     addLine(`total ${items.length * 4}`);
                     items.forEach(item => {
-                        let itemPath = lsPath === '/' ? `/${item}` : `${lsPath}/${item}`;
-                        if (item === '.') itemPath = lsPath;
-                        if (item === '..') itemPath = resolvePath(lsPath + '/..');
+                        let itemPath = d.path === '/' ? `/${item}` : `${d.path}/${item}`;
+                        if (item === '.') itemPath = d.path;
+                        if (item === '..') itemPath = resolvePath(d.path + '/..');
                         
                         const entry = VFS[itemPath];
                         const isDir = entry?.type === 'dir';
@@ -353,18 +436,9 @@ function processCommand(cmd) {
                 } else {
                     addLine(items.join('  '));
                 }
-            } else if (lsTarget && lsTarget.type === 'file') {
-                if (longFormat) {
-                    const date = 'Mar 20 01:13';
-                    const size = lsTarget.content ? lsTarget.content.length : 0;
-                    addLine(`-rw-r--r--  1 ${PROMPT_USER} ${PROMPT_USER} ${size.toString().padStart(8)} ${date} ${lsFiles[0]}`);
-                } else {
-                    addLine(lsFiles[0]);
-                }
-            } else {
-                addLine(`ls: cannot access '${lsFiles[0] || ''}': No such file or directory`);
-            }
+            });
             break;
+        }
         case 'cat':
             if (!args[1]) {
                 addLine('usage: cat <file>');
