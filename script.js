@@ -514,6 +514,10 @@ function startV86() {
         let loginBuffer = '';
         
         emulator.add_listener("serial0-output-byte", (charCode) => {
+            // 0xFF (255) is a spurious serial artifact from v86's emulation
+            // that renders as ÿ  skip it entirely
+            // i have no idea why it comes but it does work 
+            if (charCode === 0xFF) return;
             const char = String.fromCharCode(charCode);
             if (term) term.write(char);
             
@@ -524,6 +528,12 @@ function startV86() {
                     loginSent = true;
                     setTimeout(() => {
                         emulator.serial0_send("root\n");
+                        // Send a clear after a further delay to clean up any stray
+                        // characters (e.g. a lone "ÿ") that appear from the kernel
+                        // boot sequence before the shell prompt settles
+                        setTimeout(() => {
+                            emulator.serial0_send("clear\n");
+                        }, 1500);
                     }, 500); // 500ms delay to let prompt render fully
                 }
                 if (loginBuffer.length > 200) loginBuffer = loginBuffer.slice(-100);
