@@ -321,6 +321,27 @@ function handleAutocomplete() {
     }
 }
 
+function validateFlags(command, args, allowedFlags) {
+    for (const arg of args) {
+        if (arg === '--help') continue;
+        if (arg.startsWith('--')) {
+            addLine(`${command}: unrecognized option '${arg}'`);
+            addLine(`Try '${command} --help' for more information.`);
+            return false;
+        }
+        if (arg.startsWith('-') && arg.length > 1) {
+            for (let i = 1; i < arg.length; i++) {
+                if (!allowedFlags.includes(arg[i])) {
+                    addLine(`${command}: invalid option -- '${arg[i]}'`);
+                    addLine(`Try '${command} --help' for more information.`);
+                    return false;
+                }
+            }
+        }
+    }
+    return true;
+}
+
 function processCommand(cmd) {
     if (!cmd || cmd.trim() === '') return;
     let rawArgs = cmd.trim().split(/\s+/);
@@ -373,9 +394,19 @@ function processCommand(cmd) {
 
     switch (command) {
         case 'help':
+            if (args.includes('--help')) {
+                addLine('Usage: help\nDisplay information about built-in commands.\n\n      --help     display this help and exit');
+                break;
+            }
+            if (!validateFlags('help', args.slice(1), [])) break;
             addLine(HELP_TEXT);
             break;
         case 'ls': {
+            if (args.includes('--help')) {
+                addLine('Usage: ls [OPTION]... [FILE]...\nList information about the FILEs (the current directory by default).\n\n  -a, --all                do not ignore entries starting with .\n  -l                       use a long listing format\n      --help     display this help and exit');
+                break;
+            }
+            if (!validateFlags('ls', args.slice(1), ['a', 'l'])) break;
             const actualArgs = args.slice(1);
             let lsFiles = actualArgs.filter(a => !a.startsWith('-'));
             let flags = actualArgs.filter(a => a.startsWith('-')).join('');
@@ -440,6 +471,11 @@ function processCommand(cmd) {
             break;
         }
         case 'cat':
+            if (args.includes('--help')) {
+                addLine('Usage: cat [FILE]...\nConcatenate FILE(s) to standard output.\n\n      --help     display this help and exit');
+                break;
+            }
+            if (!validateFlags('cat', args.slice(1), [])) break;
             if (!args[1]) {
                 addLine('usage: cat <file>');
                 break;
@@ -455,19 +491,39 @@ function processCommand(cmd) {
             }
             break;
         case 'whoami':
+            if (args.includes('--help')) {
+                addLine('Usage: whoami [OPTION]...\nPrint the user name associated with the current effective user ID.\n\n      --help     display this help and exit');
+                break;
+            }
+            if (!validateFlags('whoami', args.slice(1), [])) break;
             addLine(PROMPT_USER);
             break;
         case 'uname':
-            if (args[1] === '-a') {
+            if (args.includes('--help')) {
+                addLine('Usage: uname [OPTION]...\nPrint certain system information.  With no OPTION, same as -s.\n\n  -a, --all                print all information\n  -s, --kernel-name        print the kernel name\n      --help     display this help and exit');
+                break;
+            }
+            if (!validateFlags('uname', args.slice(1), ['a', 's'])) break;
+            if (args.includes('-a')) {
                 addLine(navigator.userAgent);
             } else {
                 addLine('Linux');
             }
             break;
         case 'pwd':
+            if (args.includes('--help')) {
+                addLine('Usage: pwd [OPTION]...\nPrint the full filename of the current working directory.\n\n      --help     display this help and exit');
+                break;
+            }
+            if (!validateFlags('pwd', args.slice(1), [])) break;
             addLine(CWD);
             break;
         case 'cd':
+            if (args.includes('--help')) {
+                addLine('Usage: cd [DIRECTORY]\nChange the shell working directory.\n\n      --help     display this help and exit');
+                break;
+            }
+            if (!validateFlags('cd', args.slice(1), [])) break;
             const newPath = resolvePath(args[1] || '~');
             const target = VFS[newPath];
             if (target && target.type === 'dir') {
@@ -490,9 +546,19 @@ function processCommand(cmd) {
             }
             break;
         case 'uptime':
+            if (args.includes('--help')) {
+                addLine('Usage: uptime [options]\nDisplay how long the system has been running.\n\n      --help     display this help and exit');
+                break;
+            }
+            if (!validateFlags('uptime', args.slice(1), [])) break;
             addLine(`${new Date().toTimeString().split(' ')[0]} up never, load average: never heard of her`);
             break;
-        case 'date':
+        case 'date': {
+            if (args.includes('--help')) {
+                addLine('Usage: date [OPTION]...\nDisplay the current time in the given FORMAT, or set the system date.\n\n      --help     display this help and exit');
+                break;
+            }
+            if (!validateFlags('date', args.slice(1), [])) break;
             const dNow = new Date();
             const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
             const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -507,14 +573,30 @@ function processCommand(cmd) {
             const year = dNow.getFullYear();
             addLine(`${day} ${month} ${date} ${h12}:${mins}:${secs} ${ampm} IST ${year}`);
             break;
+        }
         case 'clear':
+            if (args.includes('--help')) {
+                addLine('Usage: clear\nClear the terminal screen.\n\n      --help     display this help and exit');
+                break;
+            }
+            if (!validateFlags('clear', args.slice(1), [])) break;
             output.innerHTML = '';
             break;
         case 'gui':
+            if (args.includes('--help')) {
+                addLine('Usage: gui\nOpen the graphical user interface (blog view).\n\n      --help     display this help and exit');
+                break;
+            }
+            if (!validateFlags('gui', args.slice(1), [])) break;
             showView('blog');
             break;
         case 'linux':
         case 'boot':
+            if (args.includes('--help')) {
+                addLine('Usage: linux | boot\nBoot into a real Linux kernel via v86 emulation.\n\n      --help     display this help and exit');
+                break;
+            }
+            if (!validateFlags(command, args.slice(1), [])) break;
             startV86();
             break;
         case '':
