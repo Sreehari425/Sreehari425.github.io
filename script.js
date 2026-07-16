@@ -176,7 +176,7 @@ const VFS = {
     '/etc/hostname': { type: 'file', content: PROMPT_HOST },
     '/etc/os-release': { type: 'file', content: `NAME="${getOS()}"` },
     [`/home/${PROMPT_USER}/aboutme.txt`]: { type: 'file', content: ABOUT_TEXT },
-    [`/home/${PROMPT_USER}/contact.txt`]: { type: 'file', content: 'Email: sreehari7102008@gmail.com\\nGitHub: https://github.com/Sreehari425\\nCodeberg: https://codeberg.org/sreehari425' },
+    [`/home/${PROMPT_USER}/contact.txt`]: { type: 'file', content: 'Email: sreehari7102008@gmail.com\nGitHub: https://github.com/Sreehari425\nCodeberg: https://codeberg.org/sreehari425' },
     [`/home/${PROMPT_USER}/projects`]: { type: 'dir', children: Object.keys(PROJECTS) },
     [`/home/${PROMPT_USER}/contributions.txt`]: { type: 'file', content: CONTRIBUTIONS_TEXT },
     [`/home/${PROMPT_USER}/homework`]: { 
