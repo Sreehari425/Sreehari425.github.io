@@ -5,6 +5,8 @@ const navHome = document.getElementById('nav-home');
 const navWork = document.getElementById('nav-work');
 const navTerminal = document.getElementById('nav-terminal');
 const navBlog = document.getElementById('nav-blog');
+const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+const siteNavigation = document.getElementById('site-navigation');
 
 const output = document.getElementById('output');
 const input = document.getElementById('cli-input');
@@ -112,6 +114,28 @@ navTerminal.addEventListener('click', (e) => {
 navBlog.addEventListener('click', (e) => {
     e.preventDefault();
     showView('blog');
+});
+
+function setMobileMenu(open) {
+    siteNavigation.classList.toggle('mobile-menu-open', open);
+    mobileMenuToggle.classList.toggle('menu-open', open);
+    mobileMenuToggle.setAttribute('aria-expanded', String(open));
+}
+
+mobileMenuToggle.addEventListener('click', () => {
+    setMobileMenu(!siteNavigation.classList.contains('mobile-menu-open'));
+});
+
+siteNavigation.addEventListener('click', (e) => {
+    if (e.target.closest('a')) setMobileMenu(false);
+});
+
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.nav-bar')) setMobileMenu(false);
+});
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') setMobileMenu(false);
 });
 
 document.querySelectorAll('[data-view="terminal"]').forEach(link => {

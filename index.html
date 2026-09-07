@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>sreehari@anil: ~</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,13 +19,17 @@
   <div class="nav-container">
     <div class="nav-bar">
       <a href="#" class="nav-logo">THIN.</a>
-      <div class="nav-links">
+      <div class="nav-links" id="site-navigation">
         <a href="#home" id="nav-home">HOME</a>
         <a href="#work" id="nav-work">WORK</a>
         <a href="#" id="nav-terminal">TERMINAL</a>
         <a href="#" id="nav-blog">BLOG</a>
         <div class="nav-indicator"></div>
       </div>
+      <button class="mobile-menu-toggle" id="mobile-menu-toggle" type="button" aria-expanded="false" aria-controls="site-navigation">
+        <span class="menu-label">MENU</span>
+        <span class="menu-icon" aria-hidden="true"><i></i><i></i></span>
+      </button>
       <div class="nav-right">
         <!-- Codeberg Icon SVG -->
         <a href="https://codeberg.org/sreehari425" target="_blank">
