@@ -66,29 +66,31 @@ function updateNavIndicator(activeElement) {
     navIndicator.style.width = `${offsetWidth}px`;
 }
 
+function setGuiNavActive(activeElement) {
+    [navHome, navWork, navTerminal, navBlog].forEach(link => link.classList.remove('active-pill'));
+    activeElement.classList.add('active-pill');
+    updateNavIndicator(activeElement);
+}
+
 function showView(view) {
     guiView.classList.toggle('hidden', view !== 'gui');
     terminalView.classList.toggle('hidden', view !== 'terminal');
     blogView.classList.toggle('hidden', view !== 'blog');
 
     if (view === 'terminal') {
-        navTerminal.classList.add('active-pill');
-        [navHome, navWork, navBlog].forEach(link => link.classList.remove('active-pill'));
-        updateNavIndicator(navTerminal);
+        setGuiNavActive(navTerminal);
         input.focus();
     } else if (view === 'blog') {
-        navBlog.classList.add('active-pill');
-        [navHome, navWork, navTerminal].forEach(link => link.classList.remove('active-pill'));
-        updateNavIndicator(navBlog);
+        setGuiNavActive(navBlog);
     } else {
-        navHome.classList.add('active-pill');
-        [navWork, navTerminal, navBlog].forEach(link => link.classList.remove('active-pill'));
-        updateNavIndicator(navHome);
+        setGuiNavActive(navHome);
     }
 }
 
 function scrollToSection(id) {
     showView('gui');
+    if (id === 'work') setGuiNavActive(navWork);
+    if (id === 'home') setGuiNavActive(navHome);
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -125,6 +127,18 @@ document.querySelectorAll('[data-scroll-target]').forEach(link => {
         scrollToSection(link.dataset.scrollTarget);
     });
 });
+
+const guiSections = document.querySelectorAll('.gui-view > section[id]');
+const guiSectionObserver = new IntersectionObserver((entries) => {
+    const visibleSection = entries
+        .filter(entry => entry.isIntersecting)
+        .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+
+    if (!visibleSection || terminalView.classList.contains('hidden') === false || blogView.classList.contains('hidden') === false) return;
+    setGuiNavActive(visibleSection.target.id === 'work' ? navWork : navHome);
+}, { rootMargin: '-25% 0px -60% 0px', threshold: [0, .2, .5] });
+
+guiSections.forEach(section => guiSectionObserver.observe(section));
 
 const COMMAND_LIST = ['help', 'ls', 'cat', 'whoami', 'clear', 'gui', 'uname', 'cd', 'pwd', 'uptime', 'date', 'linux', 'boot'];
 const FILE_LIST = ['aboutme.txt', 'projects/', 'contact.txt', '/etc/hostname', '/etc/os-release'];
