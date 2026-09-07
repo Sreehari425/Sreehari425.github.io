@@ -1,5 +1,8 @@
 const terminalView = document.getElementById('terminal-view');
+const guiView = document.getElementById('gui-view');
 const blogView = document.getElementById('blog-view');
+const navHome = document.getElementById('nav-home');
+const navWork = document.getElementById('nav-work');
 const navTerminal = document.getElementById('nav-terminal');
 const navBlog = document.getElementById('nav-blog');
 
@@ -64,21 +67,40 @@ function updateNavIndicator(activeElement) {
 }
 
 function showView(view) {
+    guiView.classList.toggle('hidden', view !== 'gui');
+    terminalView.classList.toggle('hidden', view !== 'terminal');
+    blogView.classList.toggle('hidden', view !== 'blog');
+
     if (view === 'terminal') {
-        terminalView.classList.remove('hidden');
-        blogView.classList.add('hidden');
         navTerminal.classList.add('active-pill');
-        navBlog.classList.remove('active-pill');
+        [navHome, navWork, navBlog].forEach(link => link.classList.remove('active-pill'));
         updateNavIndicator(navTerminal);
         input.focus();
-    } else {
-        terminalView.classList.add('hidden');
-        blogView.classList.remove('hidden');
-        navTerminal.classList.remove('active-pill');
+    } else if (view === 'blog') {
         navBlog.classList.add('active-pill');
+        [navHome, navWork, navTerminal].forEach(link => link.classList.remove('active-pill'));
         updateNavIndicator(navBlog);
+    } else {
+        navHome.classList.add('active-pill');
+        [navWork, navTerminal, navBlog].forEach(link => link.classList.remove('active-pill'));
+        updateNavIndicator(navHome);
     }
 }
+
+function scrollToSection(id) {
+    showView('gui');
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+navHome.addEventListener('click', (e) => {
+    e.preventDefault();
+    scrollToSection('home');
+});
+
+navWork.addEventListener('click', (e) => {
+    e.preventDefault();
+    scrollToSection('work');
+});
 
 navTerminal.addEventListener('click', (e) => {
     e.preventDefault();
@@ -88,6 +110,20 @@ navTerminal.addEventListener('click', (e) => {
 navBlog.addEventListener('click', (e) => {
     e.preventDefault();
     showView('blog');
+});
+
+document.querySelectorAll('[data-view="terminal"]').forEach(link => {
+    link.addEventListener('click', (e) => {
+        e.preventDefault();
+        showView('terminal');
+    });
+});
+
+document.querySelectorAll('[data-scroll-target]').forEach(link => {
+    link.addEventListener('click', (e) => {
+        e.preventDefault();
+        scrollToSection(link.dataset.scrollTarget);
+    });
 });
 
 const COMMAND_LIST = ['help', 'ls', 'cat', 'whoami', 'clear', 'gui', 'uname', 'cd', 'pwd', 'uptime', 'date', 'linux', 'boot'];
@@ -588,7 +624,7 @@ function processCommand(cmd) {
                 break;
             }
             if (!validateFlags('gui', args.slice(1), [])) break;
-            showView('blog');
+            showView('gui');
             break;
         case 'linux':
         case 'boot':
@@ -1009,7 +1045,7 @@ function initMobileSupport() {
 }
 
 // Initial View
-showView('terminal');
+showView('gui');
 
 // Auto-run commands
 processCommand('help');
