@@ -92,6 +92,7 @@ function showView(view) {
         document.title = 'Blog | Sreehari';
     } else {
         setGuiNavActive(navHome);
+        updateGuiSectionNav();
         document.title = 'THIN. | Sreehari';
     }
 }
@@ -160,16 +161,27 @@ document.querySelectorAll('[data-scroll-target]').forEach(link => {
 });
 
 const guiSections = document.querySelectorAll('.gui-view > section[id]');
-const guiSectionObserver = new IntersectionObserver((entries) => {
-    const visibleSection = entries
-        .filter(entry => entry.isIntersecting)
-        .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+let sectionNavFrame = null;
 
-    if (!visibleSection || terminalView.classList.contains('hidden') === false || blogView.classList.contains('hidden') === false) return;
-    setGuiNavActive(visibleSection.target.id === 'work' ? navWork : navHome);
-}, { rootMargin: '-25% 0px -60% 0px', threshold: [0, .2, .5] });
+function updateGuiSectionNav() {
+    if (!terminalView.classList.contains('hidden') || !blogView.classList.contains('hidden')) return;
+    if (sectionNavFrame) return;
 
-guiSections.forEach(section => guiSectionObserver.observe(section));
+    sectionNavFrame = requestAnimationFrame(() => {
+        const marker = Math.max(120, window.innerHeight * 0.3);
+        let activeSection = guiSections[0];
+
+        guiSections.forEach(section => {
+            if (section.getBoundingClientRect().top <= marker) activeSection = section;
+        });
+
+        setGuiNavActive(activeSection.id === 'work' ? navWork : navHome);
+        sectionNavFrame = null;
+    });
+}
+
+window.addEventListener('scroll', updateGuiSectionNav, { passive: true });
+window.addEventListener('resize', updateGuiSectionNav);
 
 const COMMAND_LIST = ['help', 'ls', 'cat', 'whoami', 'clear', 'gui', 'uname', 'cd', 'pwd', 'uptime', 'date', 'linux', 'boot'];
 const FILE_LIST = ['aboutme.txt', 'projects/', 'contact.txt', '/etc/hostname', '/etc/os-release'];
