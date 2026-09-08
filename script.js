@@ -81,11 +81,14 @@ function showView(view) {
 
     if (view === 'terminal') {
         setGuiNavActive(navTerminal);
+        document.title = promptEl.textContent.trim();
         input.focus();
     } else if (view === 'blog') {
         setGuiNavActive(navBlog);
+        document.title = 'Blog | Sreehari';
     } else {
         setGuiNavActive(navHome);
+        document.title = 'THIN. | Sreehari';
     }
 }
 
