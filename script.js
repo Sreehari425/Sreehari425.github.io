@@ -1,7 +1,16 @@
+if ('scrollRestoration' in history) {
+    history.scrollRestoration = 'manual';
+}
+
 const terminalView = document.getElementById('terminal-view');
+const guiView = document.getElementById('gui-view');
 const blogView = document.getElementById('blog-view');
+const navHome = document.getElementById('nav-home');
+const navWork = document.getElementById('nav-work');
 const navTerminal = document.getElementById('nav-terminal');
 const navBlog = document.getElementById('nav-blog');
+const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+const siteNavigation = document.getElementById('site-navigation');
 
 const output = document.getElementById('output');
 const input = document.getElementById('cli-input');
@@ -63,22 +72,47 @@ function updateNavIndicator(activeElement) {
     navIndicator.style.width = `${offsetWidth}px`;
 }
 
+function setGuiNavActive(activeElement) {
+    [navHome, navWork, navTerminal, navBlog].forEach(link => link.classList.remove('active-pill'));
+    activeElement.classList.add('active-pill');
+    updateNavIndicator(activeElement);
+}
+
 function showView(view) {
+    guiView.classList.toggle('hidden', view !== 'gui');
+    terminalView.classList.toggle('hidden', view !== 'terminal');
+    blogView.classList.toggle('hidden', view !== 'blog');
+
     if (view === 'terminal') {
-        terminalView.classList.remove('hidden');
-        blogView.classList.add('hidden');
-        navTerminal.classList.add('active-pill');
-        navBlog.classList.remove('active-pill');
-        updateNavIndicator(navTerminal);
+        setGuiNavActive(navTerminal);
+        document.title = promptEl.textContent.trim();
         input.focus();
+    } else if (view === 'blog') {
+        setGuiNavActive(navBlog);
+        document.title = 'Blog | Sreehari';
     } else {
-        terminalView.classList.add('hidden');
-        blogView.classList.remove('hidden');
-        navTerminal.classList.remove('active-pill');
-        navBlog.classList.add('active-pill');
-        updateNavIndicator(navBlog);
+        setGuiNavActive(navHome);
+        updateGuiSectionNav();
+        document.title = 'THIN. | Sreehari';
     }
 }
+
+function scrollToSection(id) {
+    showView('gui');
+    if (id === 'work') setGuiNavActive(navWork);
+    if (id === 'home') setGuiNavActive(navHome);
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+navHome.addEventListener('click', (e) => {
+    e.preventDefault();
+    scrollToSection('home');
+});
+
+navWork.addEventListener('click', (e) => {
+    e.preventDefault();
+    scrollToSection('work');
+});
 
 navTerminal.addEventListener('click', (e) => {
     e.preventDefault();
@@ -89,6 +123,65 @@ navBlog.addEventListener('click', (e) => {
     e.preventDefault();
     showView('blog');
 });
+
+function setMobileMenu(open) {
+    siteNavigation.classList.toggle('mobile-menu-open', open);
+    mobileMenuToggle.classList.toggle('menu-open', open);
+    mobileMenuToggle.setAttribute('aria-expanded', String(open));
+}
+
+mobileMenuToggle.addEventListener('click', () => {
+    setMobileMenu(!siteNavigation.classList.contains('mobile-menu-open'));
+});
+
+siteNavigation.addEventListener('click', (e) => {
+    if (e.target.closest('a')) setMobileMenu(false);
+});
+
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.nav-bar')) setMobileMenu(false);
+});
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') setMobileMenu(false);
+});
+
+document.querySelectorAll('[data-view="terminal"]').forEach(link => {
+    link.addEventListener('click', (e) => {
+        e.preventDefault();
+        showView('terminal');
+    });
+});
+
+document.querySelectorAll('[data-scroll-target]').forEach(link => {
+    link.addEventListener('click', (e) => {
+        e.preventDefault();
+        scrollToSection(link.dataset.scrollTarget);
+    });
+});
+
+const guiSections = document.querySelectorAll('.gui-view > section[id]');
+let sectionNavFrame = null;
+
+function updateGuiSectionNav() {
+    if (!terminalView.classList.contains('hidden') || !blogView.classList.contains('hidden')) return;
+    if (sectionNavFrame) return;
+
+    sectionNavFrame = requestAnimationFrame(() => {
+        const marker = Math.max(120, window.innerHeight * 0.3);
+        let activeSection = guiSections[0];
+
+        guiSections.forEach(section => {
+            if (section.getBoundingClientRect().top <= marker) activeSection = section;
+        });
+
+        setGuiNavActive(activeSection.id === 'work' ? navWork : navHome);
+        sectionNavFrame = null;
+    });
+}
+
+window.addEventListener('scroll', updateGuiSectionNav, { passive: true });
+window.addEventListener('resize', updateGuiSectionNav);
 
 const COMMAND_LIST = ['help', 'ls', 'cat', 'whoami', 'clear', 'gui', 'uname', 'cd', 'pwd', 'uptime', 'date', 'linux', 'boot'];
 const FILE_LIST = ['aboutme.txt', 'projects/', 'contact.txt', '/etc/hostname', '/etc/os-release'];
@@ -124,8 +217,8 @@ Available commands:
 const PROJECTS = {
     'presenceforge': '\nA Discord Rich Presence client library in Rust, supporting multiple async runtimes.\nFeatures include Flatpak detection, Unix sockets, and Windows named pipes.\nLink: https://github.com/Sreehari425/presenceforge\n',
     'q6w': '\nPlays videos as your Wayland wallpaper.\nBuilt with wgpu and GStreamer. and it efficent.\nLink: https://github.com/Sreehari425/q6w\n',
-    'idk-os': '\nA tiny x86_64 kernel written in Rust.\nBoots to VGA text mode.it can do echo only as of writing this\nLink: https://codeberg.org/sreehari425/idk-os\n',
     'ping-pong': '\nA simple ping pong game combining x86-64 Assembly and C.\nGame logic and collision in pure Assembly, rendering handled by C with SDL2.\nLink: https://github.com/Sreehari425/ping-pong\n',
+    'saeos': '\nA small bare-metal operating system written in Rust.\nBoots as a 64-bit kernel through legacy BIOS and UEFI, with memory management, drivers, timers, and a basic shell.\nLink: https://github.com/Sreehari425/saeos\n',
     'this-website': '\na portfolio that got out of hand.\nstarted as a fake terminal. ended up with a real linux kernel.\nvanilla JS, v86, and a custom buildroot image.\nLink: https://github.com/Sreehari425/Sreehari425.github.io\n'
 };
 
@@ -588,7 +681,7 @@ function processCommand(cmd) {
                 break;
             }
             if (!validateFlags('gui', args.slice(1), [])) break;
-            showView('blog');
+            showView('gui');
             break;
         case 'linux':
         case 'boot':
@@ -1009,7 +1102,8 @@ function initMobileSupport() {
 }
 
 // Initial View
-showView('terminal');
+showView('gui');
+window.scrollTo(0, 0);
 
 // Auto-run commands
 processCommand('help');
