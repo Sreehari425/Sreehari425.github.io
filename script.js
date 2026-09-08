@@ -1,3 +1,7 @@
+if ('scrollRestoration' in history) {
+    history.scrollRestoration = 'manual';
+}
+
 const terminalView = document.getElementById('terminal-view');
 const guiView = document.getElementById('gui-view');
 const blogView = document.getElementById('blog-view');
@@ -1087,6 +1091,7 @@ function initMobileSupport() {
 
 // Initial View
 showView('gui');
+window.scrollTo(0, 0);
 
 // Auto-run commands
 processCommand('help');
