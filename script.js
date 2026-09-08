@@ -217,8 +217,8 @@ Available commands:
 const PROJECTS = {
     'presenceforge': '\nA Discord Rich Presence client library in Rust, supporting multiple async runtimes.\nFeatures include Flatpak detection, Unix sockets, and Windows named pipes.\nLink: https://github.com/Sreehari425/presenceforge\n',
     'q6w': '\nPlays videos as your Wayland wallpaper.\nBuilt with wgpu and GStreamer. and it efficent.\nLink: https://github.com/Sreehari425/q6w\n',
-    'idk-os': '\nA tiny x86_64 kernel written in Rust.\nBoots to VGA text mode.it can do echo only as of writing this\nLink: https://codeberg.org/sreehari425/idk-os\n',
     'ping-pong': '\nA simple ping pong game combining x86-64 Assembly and C.\nGame logic and collision in pure Assembly, rendering handled by C with SDL2.\nLink: https://github.com/Sreehari425/ping-pong\n',
+    'saeos': '\nA small bare-metal operating system written in Rust.\nBoots as a 64-bit kernel through legacy BIOS and UEFI, with memory management, drivers, timers, and a basic shell.\nLink: https://github.com/Sreehari425/saeos\n',
     'this-website': '\na portfolio that got out of hand.\nstarted as a fake terminal. ended up with a real linux kernel.\nvanilla JS, v86, and a custom buildroot image.\nLink: https://github.com/Sreehari425/Sreehari425.github.io\n'
 };
 
