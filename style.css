@@ -458,7 +458,6 @@ body::before {
 .project-grid { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 1rem; }
 .project-card { display: flex; min-height: 290px; flex-direction: column; padding: 1.4rem; border: 1px solid #4f3500; background: rgba(17, 9, 0, .65); color: inherit; text-decoration: none; transition: border-color .2s, transform .2s, background .2s; }
 .project-card:hover { border-color: var(--accent-color); background: rgba(255, 176, 0, .08); transform: translateY(-4px); }
-.project-card-featured { background: rgba(255, 176, 0, .07); }
 .project-topline { display: flex; justify-content: space-between; font-size: .62rem; }
 .project-card h3 { margin: 3rem 0 1rem; color: #fff; font-size: 1.6rem; letter-spacing: -.04em; }
 .project-card p { color: #c2a965; font-size: .86rem; line-height: 1.7; }
