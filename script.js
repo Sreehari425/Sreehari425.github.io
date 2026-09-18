@@ -28,10 +28,10 @@ function initXterm() {
         allowTransparency: true,
         theme: {
             background: '#00000000',
-            foreground: '#FFB000',
-            cursor: '#FFB000',
-            cursorAccent: '#000',
-            selection: 'rgba(255, 176, 0, 0.3)',
+            foreground: '#00c9a7',
+            cursor: '#00c9a7',
+            cursorAccent: '#08090a',
+            selection: 'rgba(0, 201, 167, 0.3)',
         },
         cursorBlink: true,
         cursorStyle: 'block'
@@ -781,7 +781,7 @@ function startV86() {
         fitAddon.fit();
         term.focus();
 
-        term.write('\x1b[33m\r\n' +
+        term.write('\x1b[38;2;0;201;167m\r\n' +
             '   _____                  _                 _\r\n' +
             '  / ____|                | |               (_)\r\n' +
             ' | (___  _ __ ___  ___| |__   __ _ _ __ _ \r\n' +
